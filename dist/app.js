@@ -714,6 +714,7 @@ document.addEventListener("change", async (event) => {
     if (el.matches("[data-link-field]")) {
       assertEditable();
       const l = s.topology.links.find((l) => l.id === s.selected?.id);
+      if (!l) return;
       const prop = el.dataset.linkField,
         value = Number(el.value),
         limits = { bandwidth: [0.1, 1000], delay: [0, 100], loss: [0, 20] };
@@ -723,7 +724,7 @@ document.addEventListener("change", async (event) => {
         value > limits[prop][1]
       )
         throw Error("Value is outside the supported range.");
-      remember();
+      if (l[prop] !== value) remember();
       l[prop] = value;
       changed();
       redrawTopology();
@@ -765,7 +766,42 @@ document.addEventListener("change", async (event) => {
   }
 });
 let searchTimer;
+document.addEventListener("focusout", (e) => {
+  if (e.target.matches("[data-link-field]")) s.linkEditElement = null;
+});
 document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (
+    el.matches("[data-config]") &&
+    el.type === "number" &&
+    el.value !== "" &&
+    Number.isFinite(Number(el.value))
+  ) {
+    s.config[el.dataset.config] = Number(el.value);
+    save();
+  }
+  if (el.matches("[data-link-field]") && !s.snap.busy && el.value !== "") {
+    const l = s.topology.links.find((l) => l.id === s.selected?.id),
+      prop = el.dataset.linkField,
+      value = Number(el.value),
+      limits = { bandwidth: [0.1, 1000], delay: [0, 100], loss: [0, 20] };
+    if (
+      l &&
+      Number.isFinite(value) &&
+      value >= limits[prop][0] &&
+      value <= limits[prop][1] &&
+      l[prop] !== value
+    ) {
+      if (s.linkEditElement !== el) {
+        remember();
+        s.linkEditElement = el;
+      }
+      l[prop] = value;
+      changed();
+      redrawTopology();
+      renderLive();
+    }
+  }
   if (e.target.id === "packet-search") {
     s.packetSearch = e.target.value;
     s.packetPage = 0;
