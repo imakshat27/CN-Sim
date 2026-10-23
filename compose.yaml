@@ -1,0 +1,9 @@
+# Backend feasibility proof. No web server is exposed yet.
+services:
+  lab:
+    build: .
+    privileged: true
+    init: true
+    tmpfs:
+      - /run/frr
+      - /var/log/frr
