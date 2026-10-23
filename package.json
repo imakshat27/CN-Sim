@@ -1,1 +1,14 @@
-{"name":"routelab","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"python3 -m http.server 5173 --bind 127.0.0.1 --directory dist","test":"node --test tests/*.test.mjs"}}
+{
+  "name": "cn-sim",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Custom web routing laboratory backed by real RIP, OSPF and EIGRP daemons",
+  "scripts": {
+    "start": "docker compose up -d --build --wait",
+    "stop": "docker compose down",
+    "dev": "docker compose -f compose.yaml -f compose.dev.yaml up --build",
+    "test": "node --test tests/frontend.test.mjs && docker compose exec -T lab python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "test:integration": "python3 tests/integration.py"
+  }
+}
