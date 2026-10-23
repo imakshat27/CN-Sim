@@ -34,6 +34,7 @@ class Lab:
         self.nodes = {n["id"]: dict(n) for n in self.topology["nodes"]}
         self.links = {l["id"]: dict(l) for l in self.topology["links"]}
         self.procs = []
+        self.daemon_procs = []
         self.captures = []
         self.handles = []
         self.start_epoch = time.time()
@@ -234,6 +235,7 @@ class Lab:
                     ],
                     self.folder / (id + "-" + daemon + ".log"),
                 )
+                self.daemon_procs.append(p)
                 for _ in range(30):
                     if (path / (daemon + ".vty")).exists() or p.poll() is not None:
                         break

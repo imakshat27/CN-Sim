@@ -120,5 +120,44 @@ class RecoveryWindows(unittest.TestCase):
         self.assertIsNone(metrics["routeConvergence"])
 
 
+class RouterMonitor(unittest.TestCase):
+    def exercise(self, daemon_returncode):
+        import threading
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from backend.controller import Controller
+
+        c = Controller.__new__(Controller)
+        c.lock = threading.RLock()
+        c.state = {"busy": False, "error": None, "routes": {}, "phase": "ready"}
+        c.monitor_stop = Mock()
+        c.monitor_stop.wait.side_effect = [False, True]
+        c.emit = Mock()
+        daemon = Mock()
+        daemon.poll.return_value = daemon_returncode
+        finished_probe = Mock()
+        finished_probe.poll.return_value = 0
+        c.lab = SimpleNamespace(
+            protocol="OSPF",
+            daemon_procs=[daemon],
+            procs=[daemon, finished_probe],
+            captures=[],
+            routes=lambda: {},
+            signature=lambda routes: "same",
+        )
+        c.monitor_idle()
+        return c
+
+    def test_completed_probes_do_not_degrade_a_healthy_router(self):
+        c = self.exercise(None)
+        self.assertIsNone(c.state["error"])
+        self.assertEqual(c.state["phase"], "ready")
+
+    def test_actual_daemon_exit_is_reported(self):
+        c = self.exercise(1)
+        self.assertEqual(c.state["phase"], "degraded")
+        self.assertIn("daemon exited", c.state["error"])
+
+
 if __name__ == "__main__":
     unittest.main()

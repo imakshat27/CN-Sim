@@ -129,6 +129,8 @@ if __name__ == "__main__":
     probe = api("/api/probe", dict(source="PC1", target="PC2", kind="ping"))
     print(probe["output"], flush=True)
     assert ", 0% packet loss" in probe["output"], probe
+    final = api("/api/state")
+    assert not final["error"] and final["phase"] == "ready", final["message"]
     pathlib.Path("artifacts").mkdir(exist_ok=True)
     pathlib.Path("artifacts/integration-summary.json").write_text(
         json.dumps(

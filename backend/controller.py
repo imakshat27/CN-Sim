@@ -77,11 +77,7 @@ class Controller:
                         self.emit(
                             "route", self.lab.protocol + ": live kernel routes changed"
                         )
-                    dead = any(
-                        p.poll() is not None
-                        for p in self.lab.procs
-                        if p not in self.lab.captures
-                    )
+                    dead = any(p.poll() is not None for p in self.lab.daemon_procs)
                     if dead and not self.state.get("error"):
                         self.state.update(
                             error="A routing daemon exited. Redeploy the network to continue.",
@@ -234,11 +230,7 @@ class Controller:
                 elapsed=round(elapsed, 1),
                 message=f"{req.protocol}: startup {elapsed:.0f}s · {'routes complete, checking stability' if complete else 'learning remote routes'}",
             )
-            dead = [
-                p
-                for p in self.lab.procs
-                if p not in self.lab.captures and p.poll() is not None
-            ]
+            dead = [p for p in self.lab.daemon_procs if p.poll() is not None]
             if dead:
                 raise RuntimeError("A routing daemon exited. Inspect the server logs.")
             if complete and time.monotonic() - stable >= 3:
@@ -446,11 +438,7 @@ class Controller:
                     else "Cancelled"
                 )
                 warnings = []
-                if any(
-                    p.poll() is not None
-                    for p in self.lab.procs
-                    if p not in self.lab.captures and p not in (tx, rx)
-                ):
+                if any(p.poll() is not None for p in self.lab.daemon_procs):
                     warnings.append(
                         protocol
                         + ": a routing process exited during the observation window. This run records the implementation failure; it must not be presented as successful protocol convergence."
