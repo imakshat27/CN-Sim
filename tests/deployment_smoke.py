@@ -9,6 +9,8 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -49,12 +51,18 @@ name = "cn-sim-gateway-test-" + uuid.uuid4().hex[:8]
 backend, gateway = name + "-lab", name + "-gateway"
 image = os.environ.get("CN_SIM_TEST_IMAGE", "cn-sim-lab")
 root = Path.cwd()
-# A public, disposable test password; never used for a deployed environment.
-test_password = "disposable-test-only"
-hashed = docker(
-    "run", "--rm", "caddy:2.10.2-alpine", "caddy", "hash-password",
-    "--algorithm", "bcrypt", "--bcrypt-cost", "10", "--plaintext", test_password,
-)
+with tempfile.TemporaryDirectory() as directory:
+    setup = [sys.executable, str(root / "deploy/configure.py"), "--user", "test"]
+    subprocess.check_call(setup, cwd=directory)
+    settings = Path(directory, ".env")
+    login = Path(directory, ".deployment-login")
+    assert settings.stat().st_mode & 0o777 == 0o600
+    assert login.stat().st_mode & 0o777 == 0o600
+    test_password = login.read_text().split("Password: ")[1].strip()
+    hashed = settings.read_text().split("CN_SIM_PASSWORD_HASH='")[1].strip().strip("'")
+    original = settings.read_bytes()
+    assert subprocess.run(setup, cwd=directory, capture_output=True).returncode != 0
+    assert settings.read_bytes() == original
 try:
     docker("network", "create", name)
     docker(
