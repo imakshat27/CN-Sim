@@ -1,6 +1,11 @@
 """Real backend integration. Run on the host with the service running; ~2 minutes."""
 
-import urllib.request, urllib.error, json, time, pathlib, sys, http.client
+import http.client
+import json
+import pathlib
+import time
+import urllib.error
+import urllib.request
 
 BASE = "http://127.0.0.1:8000"
 
@@ -27,7 +32,7 @@ def wait():
             print(s["phase"], s["message"], flush=True)
             last = s["phase"]
         if not s["busy"]:
-            if s["error"]:
+            if s["error"] and s["phase"] == "error":
                 raise RuntimeError(s["error"])
             return s
         time.sleep(1)

@@ -1,8 +1,12 @@
-import unittest, tempfile, json, struct
+import json
+import struct
+import tempfile
+import unittest
 from pathlib import Path
-from backend.models import Topology, ExperimentRequest
-from backend.analysis import summarize, aggregate
+
+from backend.analysis import aggregate, summarize
 from backend.capture import read_capture
+from backend.models import ExperimentRequest, Topology
 
 
 class Models(unittest.TestCase):
@@ -94,10 +98,6 @@ class Measurements(unittest.TestCase):
         self.assertEqual(r[0]["epoch"], 100.5)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class RecoveryWindows(unittest.TestCase):
     def test_one_packet_per_second_can_recover(self):
         sent = [
@@ -118,3 +118,7 @@ class RecoveryWindows(unittest.TestCase):
         ]
         metrics, *_ = summarize([], [], [], 3, 100, 0, 1, 128, 1, samples, 0, True)
         self.assertIsNone(metrics["routeConvergence"])
+
+
+if __name__ == "__main__":
+    unittest.main()

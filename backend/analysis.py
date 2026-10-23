@@ -1,4 +1,5 @@
-import statistics, math
+import math
+import statistics
 
 
 def summarize(
@@ -137,16 +138,6 @@ def summarize(
             }
         )
     return metrics, packets, bins, control
-
-
-def score(metrics, failure):
-    m = metrics
-    conv = m["routeConvergence"] if failure else m["initialConvergence"]
-    payload = m["delivered"]
-    delivery = m["delivery"]
-    latency = 100 / (1 + m["meanDelay"] / 50) if m["meanDelay"] is not None else 0
-    convergence = 100 / (1 + conv / 2) if conv is not None else 0
-    return {"delivery": delivery, "latency": latency, "convergence": convergence}
 
 
 def aggregate(results):

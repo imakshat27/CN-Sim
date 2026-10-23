@@ -1,7 +1,6 @@
 """Read tcpdump's classic PCAP, Linux cooked v1/v2, Ethernet and raw IPv4."""
 
 import struct
-from pathlib import Path
 
 
 def read_capture(path, node, interfaces):

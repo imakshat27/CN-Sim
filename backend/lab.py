@@ -1,4 +1,10 @@
-import os, json, time, uuid, signal, shutil, ipaddress, subprocess as sp
+import ipaddress
+import json
+import shutil
+import signal
+import subprocess as sp
+import time
+import uuid
 from pathlib import Path
 
 DAEMONS = {"RIP": "ripd", "OSPF": "ospfd", "EIGRP": "eigrpd"}

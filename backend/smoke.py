@@ -2,9 +2,13 @@
 Run: docker compose run --rm lab python3 -m backend.smoke
 """
 
-import json, tempfile, threading, time
-from .models import Topology
+import json
+import tempfile
+import threading
+import time
+
 from .lab import Lab
+from .models import Topology
 
 
 def main():

@@ -4,7 +4,7 @@
 
 The application uses the real `eigrpd` implementation in FRRouting 10.7.1 (pinned official Debian package), with the original protocol code. It does not replace EIGRP with an estimated algorithm or patch the daemon to produce a preferred outcome.
 
-On the tested ARM64 Linux/Docker environment, EIGRP established adjacencies, learned remote routes, honored interface metric configuration, and delivered steady-state probes. On the bundled redundant topology, an administrative failure of R2–R4 (L3) left stale EIGRP successors at R2/R4. Packet forwarding on the previously preferred path did not recover during the tested observation window, even though a graph path still existed. The application recorded the resulting loss and left unobserved route convergence/recovery unavailable.
+On the tested ARM64 Linux/Docker environment, EIGRP established adjacencies, learned remote routes, honored interface metric configuration, and delivered steady-state probes. On the bundled redundant topology, an administrative failure of R2–R4 (L3) left stale EIGRP successors at R2/R4. On an x86-64 CI runner, the failure case also caused an EIGRP process to exit; the application records and warns about process exits. Packet forwarding on the previously preferred path did not recover during the tested observation window, even though a graph path still existed. The application recorded the resulting loss and left unobserved route convergence/recovery unavailable.
 
 FRR 8.4.4 was also tested during development; it exhibited incomplete routing-domain recovery on that topology. Updating to 10.7.1 did not resolve the issue. This establishes a limit of these tested implementations/configurations; it does not establish that the EIGRP protocol or Cisco IOS behaves the same way.
 

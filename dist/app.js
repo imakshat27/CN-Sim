@@ -142,6 +142,7 @@ function render() {
   bindCanvas();
 }
 function renderLive() {
+  updateTools();
   const el = $("#backend-state");
   el.innerHTML = `<span class="status-dot ${s.offline ? "off" : ""}"></span><span class="state-copy">${s.offline ? "Backend offline" : s.snap.busy ? "Experiment running" : "FRRouting connected"}</span>`;
   const banner = $("#live-banner");
@@ -174,6 +175,10 @@ function updateTools() {
   const undo = document.querySelector('[data-action="undo"]');
   if (remove) remove.disabled = s.snap.busy || !s.selected;
   if (undo) undo.disabled = s.snap.busy || !s.undo.length;
+  for (const name of ["ping", "trace"]) {
+    const button = document.querySelector(`[data-action="${name}"]`);
+    if (button) button.disabled = s.snap.busy || s.dirty || !s.snap.lab;
+  }
 }
 function redrawInspector() {
   updateTools();
@@ -341,7 +346,6 @@ async function poll() {
       snap.busy,
       snap.lab?.protocol,
       snap.lab?.links,
-      s.dirty,
       s.offline,
     ]);
     if ((liveKey !== lastLiveKey || wasOffline) && !s.drag) {
@@ -438,6 +442,8 @@ async function action(name, el) {
       await fetch("/examples/redundant.json").then((r) => r.json()),
     );
     s.selected = null;
+    s.tool = "select";
+    s.connectSource = null;
     s.config = {
       ...s.config,
       source: "PC1",
@@ -464,6 +470,7 @@ async function action(name, el) {
     if (s.undo.length) {
       s.topology = s.undo.pop();
       s.selected = null;
+      s.connectSource = null;
       fixEndpoints();
       changed();
       render();
@@ -504,6 +511,7 @@ async function action(name, el) {
       );
     } else s.topology.links = s.topology.links.filter((l) => l.id !== id);
     s.selected = null;
+    s.connectSource = null;
     fixEndpoints();
     changed();
     render();
@@ -744,6 +752,7 @@ document.addEventListener("change", async (event) => {
       remember();
       s.topology = top;
       s.selected = null;
+      s.connectSource = null;
       fixEndpoints();
       changed();
       render();

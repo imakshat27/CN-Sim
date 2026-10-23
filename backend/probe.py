@@ -1,6 +1,11 @@
 """Paced real UDP probes. Namespace processes share the same Linux monotonic clock."""
 
-import argparse, json, socket, struct, time, select
+import argparse
+import json
+import select
+import socket
+import struct
+import time
 
 HEADER = struct.Struct("!4sIQ")
 p = argparse.ArgumentParser()

@@ -29,6 +29,17 @@ jobs:
       - name: Server logs
         if: always()
         run: docker compose logs --no-color
+      - name: Collect synthetic experiment observations
+        if: always()
+        run: |
+          mkdir -p artifacts/ci
+          docker compose cp lab:/data/runs artifacts/ci/runs || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: routing-observations
+          path: artifacts/ci
+          retention-days: 7
       - name: Clean up lab
         if: always()
         run: docker compose down

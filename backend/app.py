@@ -1,16 +1,20 @@
 """Local-only CN-Sim HTTP API. All OS operations stay in the disposable lab container."""
 
-import csv, io, json, platform, threading
-from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response, HTMLResponse
+import csv
+import io
+import json
+import platform
 from html import escape
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from .models import DeployRequest, ExperimentRequest, ProbeRequest, LinkRequest
-from .controller import Controller, DATA
+
 from .analysis import aggregate
+from .controller import DATA, Controller
 from .lab import command
+from .models import DeployRequest, ExperimentRequest, LinkRequest, ProbeRequest
 
 app = FastAPI(title="CN-Sim", version="1.0.0", docs_url=None, redoc_url=None)
 app.add_middleware(
@@ -157,7 +161,10 @@ def result(id: str):
 @app.get("/api/comparison")
 def comparison(batch: str = ""):
     with controller.lock:
-        rs = [r for r in controller.results if not batch or r["batch"] == batch]
+        if not batch:
+            complete = [r for r in controller.results if r["status"] == "completed"]
+            batch = complete[-1]["batch"] if complete else ""
+        rs = [r for r in controller.results if r["batch"] == batch]
     return aggregate(rs)
 
 

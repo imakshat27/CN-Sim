@@ -1,7 +1,12 @@
 """Exercise API guards, exports, cancellation, and lab cleanup against the running service."""
 
-import json, urllib.request, urllib.error, time, http.client
-from integration import api, wait, BASE
+import http.client
+import json
+import time
+import urllib.error
+import urllib.request
+
+from integration import BASE, api, wait
 
 
 def status(path, data=None, headers=None):

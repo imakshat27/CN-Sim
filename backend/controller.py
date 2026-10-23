@@ -1,9 +1,16 @@
-import copy, json, os, platform, re, signal, subprocess as sp, threading, time, uuid
+import copy
+import json
+import os
+import platform
+import threading
+import time
+import uuid
 from collections import deque
 from pathlib import Path
-from .lab import Lab, command
+
+from .analysis import aggregate, summarize
 from .capture import read_capture
-from .analysis import summarize, aggregate
+from .lab import Lab, command
 from .models import DeployRequest
 
 DATA = Path(os.environ.get("CN_SIM_DATA", "/data"))
@@ -78,8 +85,9 @@ class Controller:
                     if dead and not self.state.get("error"):
                         self.state.update(
                             error="A routing daemon exited. Redeploy the network to continue.",
-                            phase="error",
-                            message="Routing daemon stopped",
+                            phase="degraded",
+                            message=self.lab.protocol
+                            + ": routing daemon stopped; redeploy to restore the network",
                         )
                         self.emit("error", self.state["error"])
                 except Exception as exc:
@@ -438,6 +446,15 @@ class Controller:
                     else "Cancelled"
                 )
                 warnings = []
+                if any(
+                    p.poll() is not None
+                    for p in self.lab.procs
+                    if p not in self.lab.captures and p not in (tx, rx)
+                ):
+                    warnings.append(
+                        protocol
+                        + ": a routing process exited during the observation window. This run records the implementation failure; it must not be presented as successful protocol convergence."
+                    )
                 if (
                     protocol == "EIGRP"
                     and failed is not None

@@ -1,6 +1,7 @@
 """Validated, bounded API inputs. No user-provided shell commands are accepted."""
 
-from typing import Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel, Field, conlist, constr, root_validator
 
 Identifier = constr(regex=r"^[A-Za-z][A-Za-z0-9_-]{0,15}$")
@@ -85,7 +86,7 @@ class ExperimentRequest(DeployRequest):
     rate: int = Field(default=20, ge=1, le=100)
     size: int = Field(default=512, ge=64, le=1400)
     trials: int = Field(default=1, ge=1, le=5)
-    failure_link: Optional[Identifier] = None
+    failure_link: Identifier | None = None
     failure_at: float = Field(default=10, ge=1, le=119)
 
     @root_validator
