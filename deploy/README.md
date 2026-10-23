@@ -14,7 +14,11 @@ cloud hosts and exhausted burst credits can affect observed latency and timing.
 Install Docker Engine with Compose from Docker's official Ubuntu repository.
 Copy the repository into `/opt/cn-sim`, without `.git`, local results, or secrets.
 
-Create `.env` (permissions 600) containing:
+Initialize a new host with `sudo python3 deploy/configure.py`. It generates a
+random password and writes `.env` plus `.deployment-login`, both mode 600. It
+refuses to overwrite existing settings. Retrieve the login over SSH, store it in
+your password manager, and remove the plaintext file from the server afterward.
+The `.env` contains:
 
 ```dotenv
 CN_SIM_DOMAIN=packetsim.imakshat.com
