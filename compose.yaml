@@ -1,9 +1,20 @@
-# Backend feasibility proof. No web server is exposed yet.
 services:
   lab:
     build: .
     privileged: true
     init: true
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - cn-sim-data:/data
     tmpfs:
       - /run/frr
       - /var/log/frr
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+volumes:
+  cn-sim-data:

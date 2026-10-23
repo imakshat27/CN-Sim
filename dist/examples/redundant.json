@@ -1,0 +1,144 @@
+{
+  "nodes": [
+    {
+      "id": "PC1",
+      "type": "host",
+      "x": 95,
+      "y": 310
+    },
+    {
+      "id": "R1",
+      "type": "router",
+      "x": 265,
+      "y": 310
+    },
+    {
+      "id": "R2",
+      "type": "router",
+      "x": 440,
+      "y": 175
+    },
+    {
+      "id": "R3",
+      "type": "router",
+      "x": 440,
+      "y": 455
+    },
+    {
+      "id": "R4",
+      "type": "router",
+      "x": 655,
+      "y": 175
+    },
+    {
+      "id": "R5",
+      "type": "router",
+      "x": 655,
+      "y": 455
+    },
+    {
+      "id": "R6",
+      "type": "router",
+      "x": 835,
+      "y": 310
+    },
+    {
+      "id": "PC2",
+      "type": "host",
+      "x": 1010,
+      "y": 310
+    }
+  ],
+  "links": [
+    {
+      "id": "L1",
+      "a": "PC1",
+      "b": "R1",
+      "bandwidth": 100,
+      "delay": 1,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L2",
+      "a": "R1",
+      "b": "R2",
+      "bandwidth": 100,
+      "delay": 2,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L3",
+      "a": "R2",
+      "b": "R4",
+      "bandwidth": 100,
+      "delay": 3,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L4",
+      "a": "R4",
+      "b": "R6",
+      "bandwidth": 100,
+      "delay": 2,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L5",
+      "a": "R1",
+      "b": "R3",
+      "bandwidth": 10,
+      "delay": 8,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L6",
+      "a": "R3",
+      "b": "R5",
+      "bandwidth": 10,
+      "delay": 8,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L7",
+      "a": "R5",
+      "b": "R6",
+      "bandwidth": 10,
+      "delay": 8,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L8",
+      "a": "R2",
+      "b": "R3",
+      "bandwidth": 50,
+      "delay": 4,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L9",
+      "a": "R4",
+      "b": "R5",
+      "bandwidth": 50,
+      "delay": 4,
+      "loss": 0,
+      "up": true
+    },
+    {
+      "id": "L10",
+      "a": "R6",
+      "b": "PC2",
+      "bandwidth": 100,
+      "delay": 1,
+      "loss": 0,
+      "up": true
+    }
+  ]
+}

@@ -7,5 +7,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 COPY backend /app/backend
 COPY dist /app/dist
+COPY tests /app/tests
 EXPOSE 8000
-CMD ["python3", "/app/backend/smoke.py"]
+CMD ["python3", "-m", "uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]

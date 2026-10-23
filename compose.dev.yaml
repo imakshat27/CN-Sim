@@ -1,0 +1,6 @@
+services:
+  lab:
+    volumes:
+      - ./backend:/app/backend:ro
+      - ./dist:/app/dist:ro
+      - ./tests:/app/tests:ro
