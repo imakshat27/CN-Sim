@@ -1,9 +1,10 @@
-"""Local-only CN-Sim HTTP API. All OS operations stay in the disposable lab container."""
+"""CN-Sim HTTP API, served locally or behind an authenticated HTTPS gateway."""
 
 import csv
 import io
 import json
 import platform
+import os
 from html import escape
 
 from fastapi import FastAPI, HTTPException, Request
@@ -18,7 +19,9 @@ from .models import DeployRequest, ExperimentRequest, LinkRequest, ProbeRequest
 
 app = FastAPI(title="CN-Sim", version="1.0.0", docs_url=None, redoc_url=None)
 app.add_middleware(
-    TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"]
+    TrustedHostMiddleware,
+    allowed_hosts=["127.0.0.1", "localhost", "[::1]"]
+    + [host.strip() for host in os.environ.get("CN_SIM_HOSTS", "").split(",") if host.strip()],
 )
 controller = Controller()
 
@@ -31,7 +34,8 @@ async def local_requests(request: Request, call_next):
                 {"detail": "Missing local application header"}, status_code=403
             )
         origin = request.headers.get("origin")
-        if origin and origin.rstrip("/") != str(request.base_url).rstrip("/"):
+        expected_origin = os.environ.get("CN_SIM_ORIGIN") or str(request.base_url)
+        if origin and origin.rstrip("/") != expected_origin.rstrip("/"):
             return JSONResponse(
                 {"detail": "Cross-origin mutation rejected"}, status_code=403
             )

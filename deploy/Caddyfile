@@ -1,0 +1,9 @@
+{$CN_SIM_DOMAIN} {
+	basic_auth {
+		{$CN_SIM_USER} {$CN_SIM_PASSWORD_HASH}
+	}
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy lab:8000 {
+		header_up -Authorization
+	}
+}

@@ -1,0 +1,31 @@
+services:
+  lab:
+    restart: unless-stopped
+    environment:
+      CN_SIM_HOSTS: ${CN_SIM_DOMAIN:?Set CN_SIM_DOMAIN}
+      CN_SIM_ORIGIN: https://${CN_SIM_DOMAIN:?Set CN_SIM_DOMAIN}
+  gateway:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CN_SIM_DOMAIN: ${CN_SIM_DOMAIN:?Set CN_SIM_DOMAIN}
+      CN_SIM_USER: ${CN_SIM_USER:?Set CN_SIM_USER}
+      CN_SIM_PASSWORD_HASH: ${CN_SIM_PASSWORD_HASH:?Set CN_SIM_PASSWORD_HASH}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      lab:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  caddy-data:
+  caddy-config:

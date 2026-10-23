@@ -28,6 +28,9 @@ docker compose down
 
 The service binds to loopback only. The lab container needs privileged mode to create its own network namespaces and virtual Ethernet links; it does not mount the Docker socket or use the host network.
 
+For a hosted domain, use the authenticated HTTPS gateway in
+[the EC2 deployment guide](deploy/README.md) and `compose.production.yaml`.
+
 ## What is implemented
 
 - **Topology editor:** add/move routers and hosts, connect devices, delete connections/devices, undo, zoom, import/export topology JSON, and automatically save drafts in the browser.

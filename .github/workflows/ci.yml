@@ -22,6 +22,8 @@ jobs:
         run: docker compose up -d --build --wait
       - name: Backend validation and measurement tests
         run: docker compose exec -T lab python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Production gateway and origin guards
+        run: python3 tests/deployment_smoke.py
       - name: Real routing integration
         run: python3 tests/integration.py
       - name: API lifecycle and export checks
