@@ -36,3 +36,24 @@ test("imported identifiers are escaped in generated SVG", () => {
   assert.ok(!svg.includes('data-node="<unsafe>"'));
   assert.ok(svg.includes("&lt;unsafe&gt;"));
 });
+
+import { simulationFinished, progressCopy, devicePosition } from "../dist/workflow.js";
+test("guided navigation only finishes the job started here with a new completed result", () => {
+  const pending = {job: "mine", before: ["old"]};
+  const snap = {job:"mine", busy:false, phase:"ready", results:[{id:"old",status:"completed"},{id:"new",status:"completed"}]};
+  assert.equal(simulationFinished(pending,snap), true);
+  for (const change of [{job:"other"},{busy:true},{phase:"cancelled"},{error:"Failed"},{results:[{id:"old",status:"completed"},{id:"new",status:"cancelled"}]}])
+    assert.equal(simulationFinished(pending,{...snap,...change}), false);
+  assert.equal(simulationFinished(null,snap), false);
+});
+test("progress describes route learning and a failed link without inventing completion", () => {
+  assert.match(progressCopy({phase:"converging", message:"OSPF: startup 4s"}).title,/OSPF/);
+  assert.match(progressCopy({phase:"running",lab:{protocol:"RIP"},live:{failure:0}}).detail,/link is down/);
+  assert.match(progressCopy({phase:"running",live:{failure:null}}).detail,/UDP/);
+});
+test("device drops stay within the editable canvas and tracing has no editable ports", () => {
+  assert.deepEqual(devicePosition(-200,900),{x:42,y:545});
+  const top={nodes:[{id:"R1",type:"router",x:200,y:100}],links:[]};
+  assert.match(topologySVG(top),/data-port="R1"/);
+  assert.ok(!topologySVG(top,{editable:false}).includes('data-port='));
+});

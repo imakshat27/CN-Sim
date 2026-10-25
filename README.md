@@ -1,4 +1,4 @@
-# CN-Sim
+# PacketSim
 
 **Comparative Performance Analysis of RIP, OSPF, and EIGRP Routing Protocols**
 
@@ -33,11 +33,12 @@ For a hosted domain, use the authenticated HTTPS gateway in
 
 ## What is implemented
 
-- **Topology editor:** add/move routers and hosts, connect devices, delete connections/devices, undo, zoom, import/export topology JSON, and automatically save drafts in the browser.
+- **Topology editor:** drag routers and end hosts from the component menu onto the canvas, draw wires from device ports or click two devices to connect, move/delete devices and links, undo, zoom, import/export topology JSON, and automatically save drafts in the browser.
 - **Link configuration:** bandwidth, one-way delay, random loss and link state. tc/netem applies rate, delay and loss per direction.
 - **Real routing:** independent `zebra`, `mgmtd` and protocol daemon processes in each router namespace. RIPv2, OSPFv2 area 0 and EIGRP AS 100 are supported. FRRouting **10.7.1** is pinned from its official signed package repository.
 - **Network inspection:** current kernel routes, protocol neighbor/status output, generated configuration, real ping and ICMP traceroute.
 - **Experiments:** one protocol or all three, repeat trials, choose traffic endpoints/rate/payload/duration, select a timer profile and schedule a link failure. Trials run sequentially and later trials rotate protocol order.
+- **Guided workflow:** a single Run simulation button, a floating progress pill explaining each phase, automatic navigation to the packet journey after completion, and a Next button leading to the final results.
 - **Live observations:** deployment/convergence progress, packet counters, route changes, failures and experiment event stream.
 - **Packet inspector:** search/filter the probe ledger, select a sequence number, animate its captured egress path, inspect one-way delay/RTT, view routing transmissions and download per-device PCAPs.
 - **Reports:** protocol comparison, circular green/yellow/red scores, delay and goodput charts, mean ± sample standard deviation for repeated trials, route/config inspection and an in-app methodology page.

@@ -74,7 +74,7 @@ export function field(label, name, value, options = {}) {
   return `<div class="field"><label for="cfg-${name}">${label}</label>${choices ? `<select ${attrs}>${choices.map(([val, text]) => `<option value="${esc(val)}" ${String(val) === String(value) ? "selected" : ""}>${esc(text)}</option>`).join("")}</select>` : `<input ${attrs} type="${type}" value="${esc(value)}" ${min !== undefined ? `min="${min}"` : ""} ${max !== undefined ? `max="${max}"` : ""} ${step ? `step="${step}"` : ""}>`}${help ? `<div class="field-help">${help}</div>` : ""}</div>`;
 }
 export function chart(runs, metric, title, unit) {
-  const colors = { RIP: "#bc8e41", OSPF: "#4b79a9", EIGRP: "#168b7d" };
+  const colors = { RIP: "#eab308", OSPF: "#3b82f6", EIGRP: "#22c55e" };
   const width = 500,
     height = 185,
     pad = { l: 43, r: 12, t: 10, b: 28 };
@@ -178,7 +178,7 @@ export function topologySVG(
         ? `<path d="M-15 0h30m-10-5 5 5-5 5M-5-5l-5 5 5 5M0-15v30m-5-10 5 5 5-5m-10-10 5-5 5 5"/>`
         : `<rect x="-16" y="-12" width="32" height="23" rx="2"/><path d="M-8 17h16M0 11v6"/>`;
     const address = live?.nodes?.[n.id]?.ip;
-    elements += `<g class="node ${n.type} ${selectedNode ? "selected" : ""}" data-node="${esc(n.id)}" transform="translate(${n.x} ${n.y})" role="button" tabindex="0" aria-label="${esc(n.id)} ${n.type}">${n.type === "router" ? '<circle class="shape" r="31"/>' : '<rect class="shape" x="-31" y="-28" width="62" height="56" rx="9"/>'}<g class="glyph">${glyph}</g><circle class="node-indicator ${!address ? "idle" : ""}" cx="24" cy="-22" r="4.5"/><text class="node-label" text-anchor="middle" y="49">${esc(n.id)}</text><text class="node-sub" text-anchor="middle" y="63">${address || (n.type === "router" ? "ROUTER" : "END HOST")}</text></g>`;
+    elements += `<g class="node ${n.type} ${selectedNode ? "selected" : ""}" data-node="${esc(n.id)}" transform="translate(${n.x} ${n.y})" role="button" tabindex="0" aria-label="${esc(n.id)} ${n.type}">${n.type === "router" ? '<circle class="shape" r="31"/>' : '<rect class="shape" x="-31" y="-28" width="62" height="56" rx="9"/>'}<g class="glyph">${glyph}</g><circle class="node-indicator ${!address ? "idle" : ""}" cx="24" cy="-22" r="4.5"/>${editable ? `<g class="wire-port" data-port="${esc(n.id)}" role="button" tabindex="0" aria-label="Connect a wire from ${esc(n.id)}"><circle cx="35" cy="13" r="12"/><path d="M30 13h10m-5-5v10"/></g>` : ""}<text class="node-label" text-anchor="middle" y="49">${esc(n.id)}</text><text class="node-sub" text-anchor="middle" y="63">${address || (n.type === "router" ? "ROUTER" : "END HOST")}</text></g>`;
   }
   if (trace && pathNodes.length > 1) {
     let path = pathNodes
@@ -186,7 +186,7 @@ export function topologySVG(
       .filter(Boolean)
       .map((n, i) => `${i ? "L" : "M"}${n.x} ${n.y}`)
       .join(" ");
-    elements += `<circle r="5" fill="#0b7970" stroke="white" stroke-width="2"><animateMotion dur="4s" repeatCount="indefinite" path="${path}"/></circle>`;
+    elements += `<circle r="5" fill="#22c55e" stroke="white" stroke-width="2"><animateMotion dur="4s" repeatCount="indefinite" path="${path}"/></circle>`;
   }
   return elements;
 }

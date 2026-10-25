@@ -10,6 +10,7 @@ import {
   routeInspector,
   eventRows,
 } from "./views.js";
+import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js";
 const $ = (q, root = document) => root.querySelector(q),
   main = $("#main");
 const configDefaults = {
@@ -56,6 +57,8 @@ const s = {
   packetPage: 0,
   logFilter: "all",
   drag: null,
+  wire: null,
+  pendingSimulation: null,
   modalBusy: false,
 };
 let restoredChecked = false;
@@ -118,8 +121,8 @@ function render() {
   main.innerHTML = views[s.view](s);
   $("#tabs").innerHTML = [
     ["workspace", "Workspace"],
-    ["packets", "Packet inspector"],
-    ["report", "Report"],
+    ["packets", "Packet journey"],
+    ["report", "Results"],
     ["methodology", "Methodology"],
   ]
     .map(
@@ -129,8 +132,8 @@ function render() {
     .join("");
   $("#rail-nav").innerHTML = [
     ["workspace", "network", "Workspace"],
-    ["packets", "trace", "Packet inspector"],
-    ["report", "chart", "Report"],
+    ["packets", "trace", "Packet journey"],
+    ["report", "chart", "Results"],
     ["methodology", "book", "Methodology"],
   ]
     .map(
@@ -147,9 +150,16 @@ function renderLive() {
   el.innerHTML = `<span class="status-dot ${s.offline ? "off" : ""}"></span><span class="state-copy">${s.offline ? "Backend offline" : s.snap.busy ? "Experiment running" : "FRRouting connected"}</span>`;
   const banner = $("#live-banner");
   if (banner) {
-    banner.hidden = !s.snap.busy && !s.snap.error;
+    banner.hidden = !s.snap.error;
     banner.className = "live-banner " + (s.snap.error ? "error" : "");
     banner.innerHTML = `<span>${s.snap.busy ? '<span class="spinner" style="display:inline-block;margin-right:7px"></span>' : ""}${esc(s.snap.message)}${s.snap.busy ? ` <span class="mono" style="margin-left:10px">${fmt(s.snap.progress, 0)}%</span>` : ""}</span>${s.snap.busy ? btn("Stop", "stop", "stop", "small danger") : ""}`;
+  }
+  const progress = $("#simulation-progress");
+  progress.hidden = !s.snap.busy;
+  if (s.snap.busy) {
+    const {title, detail} = progressCopy(s.snap);
+    const percent = Math.max(0, Math.min(100, Number(s.snap.progress) || 0));
+    progress.innerHTML = `<span class="progress-orbit"><span class="spinner"></span></span><div class="progress-copy"><strong>${esc(title)}</strong><span>${esc(detail)}</span><div class="progress-track" role="progressbar" aria-label="Simulation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(percent)}"><i style="width:${percent}%"></i></div></div><span class="progress-percent">${Math.round(percent)}%</span>${btn("Stop", "stop", "stop", "small ghost")}`;
   }
   if (s.view === "workspace") {
     $("#stats").outerHTML = stats(s);
@@ -171,6 +181,8 @@ function redrawTopology() {
     });
 }
 function updateTools() {
+  const run = document.querySelector('[data-action="run"]');
+  if (run) run.disabled = s.snap.busy || s.offline || Boolean(s.startingSimulation);
   const remove = document.querySelector('[data-action="delete"]');
   const undo = document.querySelector('[data-action="undo"]');
   if (remove) remove.disabled = s.snap.busy || !s.selected;
@@ -193,6 +205,7 @@ function route() {
     ? hash
     : "workspace";
   render();
+  window.scrollTo({top: 0, behavior: "smooth"});
 }
 function assertEditable() {
   if (s.snap.busy)
@@ -348,7 +361,7 @@ async function poll() {
       snap.lab?.links,
       s.offline,
     ]);
-    if ((liveKey !== lastLiveKey || wasOffline) && !s.drag) {
+    if ((liveKey !== lastLiveKey || wasOffline) && !s.drag && !s.wire && !paletteDrag) {
       lastLiveKey = liveKey;
       if (s.view === "workspace") render();
     }
@@ -367,6 +380,18 @@ async function poll() {
     }
     if (resultsChanged && ["packets", "report"].includes(s.view)) render();
     else renderLive();
+    if (simulationFinished(s.pendingSimulation, snap)) {
+      const fresh = snap.results.filter(r => r.status === "completed" && !s.pendingSimulation.before.includes(r.id));
+      const latest = fresh.at(-1);
+      await selectRun(latest.id);
+      await selectBatch(latest.batch);
+      s.pendingSimulation = null;
+      if (s.view === "packets") render();
+      else location.hash = "packets";
+      toast("Simulation complete. Select a packet to explore its journey.");
+    } else if (s.pendingSimulation && !snap.busy && snap.job === s.pendingSimulation.job) {
+      s.pendingSimulation = null;
+    }
     if (previousBusy && !snap.busy && snap.error) toast(snap.error);
   } catch (e) {
     if (!s.offline) {
@@ -427,7 +452,7 @@ async function action(name, el) {
     return;
   }
   if (name === "save") {
-    download("CN-Sim-topology.json", s.topology);
+    download("PacketSim-topology.json", s.topology);
     toast("Topology downloaded.");
     return;
   }
@@ -478,25 +503,7 @@ async function action(name, el) {
     return;
   }
   if (name === "add-router" || name === "add-host") {
-    assertEditable();
-    if (s.topology.nodes.length >= 20)
-      throw Error("The lab supports up to 20 devices.");
-    remember();
-    const type = name === "add-router" ? "router" : "host",
-      prefix = type === "router" ? "R" : "PC";
-    let i = 1;
-    while (s.topology.nodes.some((n) => n.id === prefix + i)) i++;
-    const n = {
-      id: prefix + i,
-      type,
-      x: 190 + (s.topology.nodes.length % 5) * 165,
-      y: 125 + Math.floor(s.topology.nodes.length / 5) * 125,
-    };
-    s.topology.nodes.push(n);
-    s.selected = { kind: "node", id: n.id };
-    fixEndpoints();
-    changed();
-    render();
+    addDevice(name === "add-router" ? "router" : "host");
     return;
   }
   if (name === "delete") {
@@ -548,14 +555,23 @@ async function action(name, el) {
     const c = s.config;
     if (c.source === c.target)
       throw Error("Choose different traffic endpoints.");
-    await api("/experiments", {
+    assertEditable();
+    if (s.startingSimulation) return;
+    s.startingSimulation = true;
+    const before = s.snap.results.map(r => r.id);
+    let started;
+    try {
+      started = await api("/experiments", {
       ...c,
       protocols: c.mode === "compare" ? ["RIP", "OSPF", "EIGRP"] : [c.protocol],
       topology: s.topology,
       failure_link: c.failure_link || null,
     });
+    } finally { s.startingSimulation = false; }
+    s.pendingSimulation = {job: started.job, before};
     s.dirty = false;
     s.snap.busy = true;
+    s.snap.phase = "starting";
     s.snap.message = "Starting experiment…";
     s.snap.error = null;
     render();
@@ -563,6 +579,7 @@ async function action(name, el) {
     return;
   }
   if (name === "stop") {
+    s.pendingSimulation = null;
     await api("/lab/stop", {});
     toast(
       s.snap.busy
@@ -676,8 +693,8 @@ async function action(name, el) {
     return;
   }
   if (name === "export-report") {
-    download("CN-Sim-comparison-" + s.selectedBatch + ".json", {
-      title: "CN-Sim routing comparison",
+    download("PacketSim-comparison-" + s.selectedBatch + ".json", {
+      title: "PacketSim routing comparison",
       batch: s.selectedBatch,
       exported: new Date().toISOString(),
       scoring:
@@ -692,6 +709,7 @@ async function action(name, el) {
   }
 }
 document.addEventListener("click", (event) => {
+  if (Date.now() < suppressPaletteClickUntil && event.target.closest("[data-device-type]")) { event.preventDefault(); return; }
   const el = event.target.closest("[data-action]");
   if (!el || el.disabled) return;
   event.preventDefault();
@@ -732,6 +750,7 @@ document.addEventListener("change", async (event) => {
     }
     if (el.id === "run-select") {
       await selectRun(el.value);
+      await selectBatch(s.activeResult.batch);
       render();
     }
     if (el.id === "batch-select") {
@@ -828,81 +847,131 @@ document.addEventListener("keydown", (e) => {
   else if (key === "v" || key === "escape")
     action("tool-select", {}).catch((x) => toast(x.message));
 });
+function addDevice(type, position) {
+  assertEditable();
+  if (s.topology.nodes.length >= 20) throw Error("The lab supports up to 20 devices.");
+  remember();
+  const prefix = type === "router" ? "R" : "PC";
+  let i = 1;
+  while (s.topology.nodes.some(n => n.id === prefix + i)) i++;
+  const n = {id: prefix + i, type, ...devicePosition(
+    position?.x ?? 190 + (s.topology.nodes.length % 5) * 165,
+    position?.y ?? 125 + Math.floor(s.topology.nodes.length / 5) * 125)};
+  s.topology.nodes.push(n);
+  s.selected = {kind: "node", id: n.id};
+  s.tool = "select";
+  s.connectSource = null;
+  fixEndpoints(); changed(); render();
+}
+let paletteDrag = null, suppressPaletteClickUntil = 0;
+document.addEventListener("pointerdown", e => {
+  const card = e.target.closest("[data-device-type]");
+  if (!card || card.disabled || s.snap.busy || e.button !== 0) return;
+  // Pointer dragging works with a mouse, pen or touch; keyboard clicks still add devices.
+  e.preventDefault();
+  card.focus();
+  paletteDrag = {type: card.dataset.deviceType, x: e.clientX, y: e.clientY, pointer: e.pointerId, moved: false};
+  card.setPointerCapture(e.pointerId);
+});
+document.addEventListener("pointermove", e => {
+  if (!paletteDrag || paletteDrag.pointer !== e.pointerId) return;
+  if (Math.hypot(e.clientX - paletteDrag.x, e.clientY - paletteDrag.y) > 6) paletteDrag.moved = true;
+  if (!paletteDrag.moved) return;
+  let ghost = $("#palette-ghost");
+  if (!ghost) {
+    ghost = document.createElement("div"); ghost.id = "palette-ghost";
+    ghost.innerHTML = icon(paletteDrag.type) + `<span>${paletteDrag.type === "router" ? "Router" : "End host"}</span>`;
+    document.body.append(ghost);
+  }
+  ghost.style.left = e.clientX + "px"; ghost.style.top = e.clientY + "px";
+  const rect = $("#topology")?.getBoundingClientRect();
+  const over = rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+  $(".canvas-wrap")?.classList.toggle("drop-ready", Boolean(over));
+});
+function finishPalette(e, cancelled = false) {
+  if (!paletteDrag || paletteDrag.pointer !== e.pointerId) return;
+  const drag = paletteDrag; paletteDrag = null;
+  $("#palette-ghost")?.remove(); $(".canvas-wrap")?.classList.remove("drop-ready");
+  suppressPaletteClickUntil = Date.now() + 450;
+  if (cancelled) return;
+  try {
+    if (!drag.moved) { addDevice(drag.type); return; }
+    const svg = $("#topology"), rect = svg?.getBoundingClientRect();
+    if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom)
+      addDevice(drag.type, canvasPosition(svg, e.clientX, e.clientY));
+    else toast("Drop the component inside the network canvas.");
+  } catch (error) { toast(error.message); }
+}
+document.addEventListener("pointerup", e => finishPalette(e));
+document.addEventListener("pointercancel", e => finishPalette(e, true));
 function bindCanvas() {
   const svg = $("#topology");
   if (!svg) return;
-  const point = (e) => {
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
-  };
-  svg.addEventListener("pointerdown", (e) => {
-    if (s.snap.busy) return;
-    const nodeEl = e.target.closest("[data-node]"),
-      linkEl = e.target.closest("[data-link]");
+  svg.addEventListener("pointerdown", e => {
+    if (s.snap.busy || e.button !== 0) return;
+    const nodeEl = e.target.closest("[data-node]"), linkEl = e.target.closest("[data-link]");
     if (nodeEl) {
       const id = nodeEl.dataset.node;
-      if (s.tool === "connect") {
-        connect(id);
+      if (e.target.closest("[data-port]")) {
+        e.preventDefault();
+        s.wire = {from: id, x: e.clientX, y: e.clientY, moved: false};
+        svg.setPointerCapture(e.pointerId);
         return;
       }
-      s.selected = { kind: "node", id };
-      const n = s.topology.nodes.find((n) => n.id === id),
-        p = point(e);
-      s.drag = {
-        id,
-        dx: p.x - n.x,
-        dy: p.y - n.y,
-        original: structuredClone(s.topology),
-        moved: false,
-      };
+      if (s.tool === "connect" || s.connectSource) { connect(id); return; }
+      s.selected = {kind: "node", id};
+      const n = s.topology.nodes.find(n => n.id === id), point = canvasPosition(svg, e.clientX, e.clientY);
+      s.drag = {id, dx: point.x - n.x, dy: point.y - n.y, original: structuredClone(s.topology), moved: false};
       svg.setPointerCapture(e.pointerId);
-      redrawTopology();
-      redrawInspector();
+      redrawTopology(); redrawInspector();
     } else if (linkEl) {
-      s.selected = { kind: "link", id: linkEl.dataset.link };
-      redrawTopology();
-      redrawInspector();
+      s.selected = {kind: "link", id: linkEl.dataset.link}; redrawTopology(); redrawInspector();
     } else {
-      s.selected = null;
-      redrawTopology();
-      redrawInspector();
+      s.selected = null; s.connectSource = null; redrawTopology(); redrawInspector();
+      $(".connection-prompt")?.remove();
     }
   });
-  svg.addEventListener("pointermove", (e) => {
+  svg.addEventListener("pointermove", e => {
+    if (s.wire) {
+      if (Math.hypot(e.clientX - s.wire.x, e.clientY - s.wire.y) > 5) s.wire.moved = true;
+      const from = s.topology.nodes.find(n => n.id === s.wire.from), point = canvasPosition(svg, e.clientX, e.clientY);
+      let line = $("#wire-preview", svg);
+      if (!line) { line = document.createElementNS("http://www.w3.org/2000/svg", "line"); line.id = "wire-preview"; svg.append(line); }
+      for (const [key, val] of Object.entries({x1:from.x, y1:from.y, x2:point.x, y2:point.y})) line.setAttribute(key,val);
+      return;
+    }
     if (!s.drag) return;
-    const n = s.topology.nodes.find((n) => n.id === s.drag.id),
-      p = point(e);
-    n.x = Math.round(Math.max(42, Math.min(1058, p.x - s.drag.dx)));
-    n.y = Math.round(Math.max(60, Math.min(545, p.y - s.drag.dy)));
-    s.drag.moved = true;
-    redrawTopology();
+    const n = s.topology.nodes.find(n => n.id === s.drag.id), point = canvasPosition(svg, e.clientX, e.clientY);
+    const position = devicePosition(point.x - s.drag.dx, point.y - s.drag.dy);
+    if (position.x !== n.x || position.y !== n.y) s.drag.moved = true;
+    Object.assign(n, position); redrawTopology();
   });
-  const end = () => {
-    if (s.drag?.moved) {
-      s.undo.push(s.drag.original);
-      save();
+  const end = e => {
+    if (s.wire) {
+      const wire = s.wire; s.wire = null; $("#wire-preview", svg)?.remove();
+      if (e.type === "pointercancel") return;
+      const target = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-node]")?.dataset.node;
+      s.connectSource = wire.from;
+      if (target && target !== wire.from) connect(target);
+      else if (!wire.moved) { s.tool = "connect"; s.selected = {kind:"node", id:wire.from}; render(); }
+      else { s.connectSource = null; toast("Drop the wire on another device to connect it."); }
+      return;
     }
-    s.drag = null;
-    updateTools();
+    if (s.drag?.moved) { s.undo.push(s.drag.original); if (s.undo.length > 50) s.undo.shift(); save(); }
+    s.drag = null; updateTools();
   };
   svg.addEventListener("pointerup", end);
   svg.addEventListener("pointercancel", end);
-  svg.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      const node = e.target.closest("[data-node]");
-      if (!node) return;
-      e.preventDefault();
-      if (s.tool === "connect") connect(node.dataset.node);
-      else {
-        s.selected = { kind: "node", id: node.dataset.node };
-        redrawInspector();
-        redrawTopology();
-      }
-    }
+  svg.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const node = e.target.closest("[data-node]");
+    if (!node) return;
+    e.preventDefault();
+    if (e.target.closest("[data-port]") || s.tool === "connect" || s.connectSource) connect(node.dataset.node);
+    else { s.selected = {kind:"node", id:node.dataset.node}; redrawInspector(); redrawTopology(); }
   });
 }
+
 function connect(id) {
   try {
     assertEditable();
@@ -982,5 +1051,5 @@ async function boot() {
   setInterval(poll, 1200);
 }
 boot().catch((e) => {
-  main.innerHTML = `<section class="panel empty-state"><h1>Could not load CN-Sim</h1><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reload</button></section>`;
+  main.innerHTML = `<section class="panel empty-state"><h1>Could not load PacketSim</h1><p>${esc(e.message)}</p><button class="btn" onclick="location.reload()">Reload</button></section>`;
 });
