@@ -225,15 +225,19 @@ class Controller:
                 previous = sig
                 self.emit("route", f"{req.protocol}: routing tables updated")
             complete = self.lab.complete(routes)
+            shortest_paths = self.lab.shortest_paths_ready(routes)
+            if not complete or not shortest_paths:
+                # A quiet but suboptimal startup table is not convergence.
+                stable = time.monotonic()
             self.update(
                 routes=routes,
                 elapsed=round(elapsed, 1),
-                message=f"{req.protocol}: startup {elapsed:.0f}s · {'routes complete, checking stability' if complete else 'learning remote routes'}",
+                message=f"{req.protocol}: startup {elapsed:.0f}s · {'checking lowest-cost route stability' if complete and shortest_paths else 'waiting for shortest-path calculation' if complete else 'learning remote routes'}",
             )
             dead = [p for p in self.lab.daemon_procs if p.poll() is not None]
             if dead:
                 raise RuntimeError("A routing daemon exited. Inspect the server logs.")
-            if complete and time.monotonic() - stable >= 3:
+            if complete and shortest_paths and time.monotonic() - stable >= 3:
                 ready = True
                 break
             self.cancel.wait(0.5)
@@ -500,7 +504,7 @@ class Controller:
                         "clock": "Shared Linux CLOCK_MONOTONIC; one-way UDP timestamps use the same kernel clock",
                         "capture": "IPv4 bytes at egress on all virtual interfaces; routing packet transmissions counted once per link",
                         "queue": "tc netem limit 1000; per-direction configured rate/delay/loss",
-                        "measurement": "Packet delivery from received UDP sequence IDs; throughput is application payload goodput; startup is the last observed route change followed by 3 s stable/complete; failure convergence requires 2 s stable/complete; routing sampled every ~0.5 s.",
+                        "measurement": "Packet delivery from received UDP sequence IDs; throughput is application payload goodput; startup is the last observed route change followed by 3 s stable/complete; OSPF startup also requires minimum-cost installed next hops; failure convergence requires 2 s stable/complete; routing sampled every ~0.5 s.",
                     },
                     "configs": {
                         n: v.get("config", "End host: default gateway")

@@ -51,7 +51,7 @@ For a hosted domain, use the authenticated HTTPS gateway in
 
 1. Use the bundled six-router, two-host topology. The upper route has faster links; the lower route provides redundancy.
 2. Select **Compare all**, source **PC1**, destination **PC2**, 25s, 20 packets/s and a 512-byte payload. Start with **no scheduled failure**.
-3. Run the comparison. Each protocol first gets a fresh network and must learn complete routes and remain stable for three seconds. Startup time is measured separately from traffic.
+3. Run the comparison. Each protocol first gets a fresh network and must learn complete routes and remain stable for three seconds. Startup time is measured separately from traffic. OSPF additionally waits until installed next hops follow minimum-cost paths, so a temporary higher-cost startup route cannot carry the first measured packets.
 4. Open **Packet inspector**, select a packet and inspect the actual egress observations. Download a PCAP to examine protocol messages in Wireshark.
 5. Open **Report**. Compare raw metrics before interpreting the circles. Use two or three trials to display variation.
 6. Run a separate failure experiment, for example disconnecting R2–R4 (L3). Explain the difference between data-plane recovery and complete routing-table convergence, including the FRR EIGRP limitation when observed.
@@ -92,7 +92,7 @@ One Docker Linux environment contains the controller and separate network stacks
 | Failure route convergence | Last observed change after link failure, followed by at least 2s stable and complete routes |
 | Data-plane recovery | Start of the first complete 1s send-time window after failure with all expected probes delivered |
 
-Tables are sampled approximately every **0.5s**, so convergence estimates have that sampling uncertainty plus controller overhead. Readiness checks route presence to graph-reachable endpoint addresses; chosen-flow delivery and tracing independently check forwarding. The sender allows a two-second drain period. A missing observation is displayed as **—**, never substituted with zero.
+Tables are sampled approximately every **0.5s**, so convergence estimates have that sampling uncertainty plus controller overhead. Readiness checks route presence to graph-reachable endpoint addresses. For OSPF it also validates every installed next hop against the minimum total configured link cost, accepting equal-cost alternatives, before the three-second stability interval can complete; chosen-flow delivery and tracing independently check forwarding. The sender allows a two-second drain period. A missing observation is displayed as **—**, never substituted with zero.
 
 Charts group packets by their **send-time second** and show the last trial per protocol. Repeated-trial tables show mean ± sample SD. Missing metrics are excluded from their metric mean and the observation count is shown; cancelled trials are excluded entirely.
 

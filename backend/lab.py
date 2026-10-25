@@ -1,4 +1,5 @@
 import ipaddress
+import heapq
 import json
 import shutil
 import signal
@@ -10,6 +11,10 @@ from pathlib import Path
 DAEMONS = {"RIP": "ripd", "OSPF": "ospfd", "EIGRP": "eigrpd"}
 # Match the editor's maximum link speed so 100 Mbps and gigabit links differ.
 OSPF_REFERENCE_BANDWIDTH_MBPS = 1000
+
+
+def ospf_cost(bandwidth):
+    return max(1, int(OSPF_REFERENCE_BANDWIDTH_MBPS / bandwidth))
 
 
 def command(*args, check=True, timeout=10):
@@ -184,7 +189,7 @@ class Lab:
                 l = self.links[it["link"]]
                 config += f"interface {it['name']}\n"
                 if self.protocol == "OSPF":
-                    config += f" ip ospf network point-to-point\n ip ospf cost {max(1, int(OSPF_REFERENCE_BANDWIDTH_MBPS / l['bandwidth']))}\n"
+                    config += f" ip ospf network point-to-point\n ip ospf cost {ospf_cost(l['bandwidth'])}\n"
                     if self.profile == "lab":
                         config += (
                             " ip ospf hello-interval 1\n ip ospf dead-interval 4\n"
@@ -316,6 +321,59 @@ class Lab:
                     for r in routes.get(id, [])
                 ):
                     return False
+        return True
+
+    def shortest_paths_ready(self, routes):
+        """Check OSPF's installed next hops, without installing or altering routes.
+
+        A complete table can still contain a temporary higher-cost route while
+        OSPF has a deferred SPF calculation. Accept any equal-cost next hop, but
+        wait until every installed next hop is on a minimum-cost path.
+        """
+        if self.protocol != "OSPF":
+            return True
+        adjacency = {id: [] for id in self.nodes}
+        for link in self.links.values():
+            if not link["up"]:
+                continue
+            cost = ospf_cost(link["bandwidth"])
+            for source, peer in [(link["a"], link["b"]), (link["b"], link["a"])]:
+                adjacency[source].append((peer, cost, link["ends"][source]))
+        for target, node in self.nodes.items():
+            distances = {target: 0}
+            queue = [(0, target)]
+            while queue:
+                distance, current = heapq.heappop(queue)
+                if distance != distances[current]:
+                    continue
+                for peer, cost, _ in adjacency[current]:
+                    candidate = distance + cost
+                    if candidate < distances.get(peer, float("inf")):
+                        distances[peer] = candidate
+                        heapq.heappush(queue, (candidate, peer))
+            address = ipaddress.ip_address(node["ip"])
+            for source, source_node in self.nodes.items():
+                if source == target or source_node["type"] != "router" or source not in distances:
+                    continue
+                matches = [
+                    (ipaddress.ip_network(route.get("dst", "0.0.0.0/0"), strict=False), route)
+                    for route in routes.get(source, [])
+                    if route.get("type") not in ("unreachable", "blackhole", "prohibit")
+                ]
+                matches = [(network, route) for network, route in matches if address in network]
+                if not matches:
+                    return False
+                _, route = max(matches, key=lambda entry: entry[0].prefixlen)
+                for hop in route.get("nexthops") or [route]:
+                    if "dead" in hop.get("flags", []) or "linkdown" in hop.get("flags", []):
+                        return False
+                    if not any(
+                        hop.get("dev") == interface
+                        and peer in distances
+                        and cost + distances[peer] == distances[source]
+                        for peer, cost, interface in adjacency[source]
+                    ):
+                        return False
         return True
 
     def inspect(self, id):
