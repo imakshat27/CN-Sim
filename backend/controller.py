@@ -487,6 +487,7 @@ class Controller:
                         {k: v for k, v in s.items() if k != "signature"}
                         for s in samples
                     ],
+                    "routingTables": self.lab.routing_tables(),
                     "routes": self.lab.routes(),
                     "traceroute": traceroute,
                     "failureAt": failed,

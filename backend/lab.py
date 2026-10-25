@@ -376,6 +376,22 @@ class Lab:
                         return False
         return True
 
+    def routing_tables(self):
+        """Preserve native FRR tables, including actual protocol metrics, per run."""
+        result = {}
+        for id, node in self.nodes.items():
+            if node["type"] != "router":
+                continue
+            try:
+                text = command(
+                    "vtysh", "--vty_socket", node["runtime_path"],
+                    "-c", "show ip route", timeout=5,
+                )
+                result[id] = {"protocol": self.protocol, "text": text, "capturedAt": time.time()}
+            except Exception as error:
+                result[id] = {"protocol": self.protocol, "error": str(error), "capturedAt": time.time()}
+        return result
+
     def inspect(self, id):
         n = self.nodes[id]
         if n["type"] == "host":

@@ -40,7 +40,7 @@ For a hosted domain, use the authenticated HTTPS gateway in
 - **Experiments:** one protocol or all three, repeat trials, choose traffic endpoints/rate/payload/duration, select a timer profile and schedule a link failure. Trials run sequentially and later trials rotate protocol order.
 - **Guided workflow:** a single Run simulation button, a floating progress pill explaining each phase, automatic navigation to the packet journey after completion, and a Next button leading to the final results.
 - **Live observations:** deployment/convergence progress, packet counters, route changes, failures and experiment event stream.
-- **Packet inspector:** search/filter the probe ledger, select a sequence number, animate its captured egress path, inspect one-way delay/RTT, view routing transmissions and download per-device PCAPs.
+- **Packet inspector:** hover, focus or tap a router to view its selected run’s recorded routing table (native FRRouting metrics for new runs; clearly labelled kernel forwarding tables for older runs), search/filter the probe ledger, select a sequence number, animate its captured egress path, inspect one-way delay/RTT, view routing transmissions and download per-device PCAPs.
 - **Reports:** protocol comparison, circular green/yellow/red scores, delay and goodput charts, mean ± sample standard deviation for repeated trials, route/config inspection and an in-app methodology page.
 - **Exports:** full result JSON, packet CSV, comparison JSON, PCAPs and print-to-PDF report layout.
 - **Persistence:** completed result JSON and PCAPs live in the named Docker volume; topology/settings live in browser storage. Background jobs can be stopped, and cancelled trials are excluded from report averages.

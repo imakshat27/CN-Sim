@@ -10,6 +10,7 @@ import {
   routeInspector,
   eventRows,
 } from "./views.js?v=20261025-2";
+import { routingPopover } from "./routing.js?v=20261026-1";
 import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261025-2";
 const $ = (q, root = document) => root.querySelector(q),
   main = $("#main");
@@ -112,6 +113,7 @@ function changed() {
   save();
 }
 function render() {
+  hideRoutingPopover();
   const views = {
     workspace,
     packets: traceView,
@@ -296,6 +298,7 @@ async function loadRun(id) {
   return s.cache.get(id);
 }
 async function selectRun(id) {
+  hideRoutingPopover();
   s.activeRun = id;
   s.activeResult = await loadRun(id);
   s.selectedPacket = s.activeResult.packets[0]?.id || 1;
@@ -433,6 +436,7 @@ function probeModal(kind) {
   );
 }
 async function action(name, el) {
+  if (name === "close-routing-popover") { hideRoutingPopover(); return; }
   if (name.startsWith("tool-")) {
     assertEditable();
     s.tool = name.slice(5);
@@ -1031,6 +1035,68 @@ function connect(id) {
     render();
   }
 }
+let routingHideTimer, routingAnchor = null;
+function hideRoutingPopover() {
+  clearTimeout(routingHideTimer);
+  const popup = $("#router-popover");
+  if (popup) popup.hidden = true;
+  routingAnchor?.removeAttribute("aria-controls");
+  routingAnchor = null;
+}
+function showRoutingPopover(anchor) {
+  clearTimeout(routingHideTimer);
+  if (s.view !== "packets" || !s.activeResult || s.activeResult.id !== s.activeRun) return;
+  const html = routingPopover(s.activeResult, anchor.dataset.traceRouter);
+  if (!html) return;
+  const popup = $("#router-popover");
+  routingAnchor?.removeAttribute("aria-controls");
+  routingAnchor = anchor;
+  anchor.setAttribute("aria-controls", "router-popover");
+  popup.innerHTML = html;
+  popup.hidden = false;
+  const rect = anchor.getBoundingClientRect();
+  const width = popup.offsetWidth, height = popup.offsetHeight;
+  popup.style.left = Math.max(12, Math.min(window.innerWidth - width - 12, rect.left + rect.width / 2 - width / 2)) + "px";
+  const below = rect.bottom + 12;
+  const top = below + height <= window.innerHeight - 12 ? below : rect.top - height - 12;
+  popup.style.top = Math.max(12, Math.min(window.innerHeight - height - 12, top)) + "px";
+}
+function scheduleRoutingHide() {
+  clearTimeout(routingHideTimer);
+  routingHideTimer = setTimeout(hideRoutingPopover, 180);
+}
+document.addEventListener("pointerover", event => {
+  const anchor = event.target.closest("[data-trace-router]");
+  if (anchor && !anchor.contains(event.relatedTarget)) showRoutingPopover(anchor);
+  else if (event.target.closest("#router-popover")) clearTimeout(routingHideTimer);
+});
+document.addEventListener("pointerout", event => {
+  const region = event.target.closest("[data-trace-router], #router-popover");
+  if (region && !region.contains(event.relatedTarget)) scheduleRoutingHide();
+});
+document.addEventListener("focusin", event => {
+  const anchor = event.target.closest("[data-trace-router]");
+  if (anchor) showRoutingPopover(anchor);
+  else if (event.target.closest("#router-popover")) clearTimeout(routingHideTimer);
+  else hideRoutingPopover();
+});
+document.addEventListener("click", event => {
+  const anchor = event.target.closest("[data-trace-router]");
+  if (anchor) showRoutingPopover(anchor);
+  else if (!event.target.closest("#router-popover")) hideRoutingPopover();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") hideRoutingPopover();
+  const anchor = event.target.closest("[data-trace-router]");
+  if (anchor && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault(); showRoutingPopover(anchor);
+    $(".routing-scroll", $("#router-popover"))?.focus();
+  }
+});
+window.addEventListener("resize", hideRoutingPopover);
+document.addEventListener("scroll", event => {
+  if (!event.target.closest?.("#router-popover")) hideRoutingPopover();
+}, true);
 window.addEventListener("hashchange", route);
 async function boot() {
   try {

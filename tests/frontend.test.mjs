@@ -57,3 +57,30 @@ test("device drops stay within the editable canvas and tracing has no editable p
   assert.match(topologySVG(top),/data-port="R1"/);
   assert.ok(!topologySVG(top,{editable:false}).includes('data-port='));
 });
+
+import { routingPopover } from "../dist/routing.js";
+test("router popup uses the selected run's own native protocol table", () => {
+  const base = {trial:1,topology:{nodes:[{id:"R1",type:"router"}]},routes:{R1:[]}};
+  const ospf = {...base,protocol:"OSPF",routingTables:{R1:{protocol:"OSPF",text:"O 10.0.9.0/30 [110/150] via 10.0.2.2"}}};
+  const rip = {...base,protocol:"RIP",routingTables:{R1:{protocol:"RIP",text:"R 10.0.9.0/30 [120/3] via 10.0.4.2"}}};
+  assert.match(routingPopover(ospf,"R1"),/110\/150/);
+  assert.ok(!routingPopover(rip,"R1").includes("110/150"));
+  assert.match(routingPopover(rip,"R1"),/120\/3/);
+  assert.match(routingPopover(ospf,"R1"),/end of the selected run/);
+});
+test("old snapshots never present Linux route priority as the protocol metric", () => {
+  const run = {protocol:"OSPF",trial:1,topology:{nodes:[{id:"R1",type:"router"}]},routes:{R1:[{dst:"10.0.9.0/30",metric:20,protocol:"ospf",nexthops:[{gateway:"10.0.2.2",dev:"a2"},{gateway:"10.0.4.2",dev:"a4"}]}]}};
+  const html = routingPopover(run,"R1");
+  assert.match(html,/Linux route priority is not the OSPF metric/);
+  assert.match(html,/10.0.2.2/);
+  assert.match(html,/10.0.4.2/);
+  assert.ok(!html.includes('<td>20</td>'));
+  run.routingTables={R1:{protocol:"RIP",text:"wrong protocol"}};
+  assert.ok(!routingPopover(run,"R1").includes("wrong protocol"));
+});
+test("router popup escapes recorded output and is unavailable on hosts", () => {
+  const run={protocol:"EIGRP",trial:1,topology:{nodes:[{id:"R1",type:"router"},{id:"PC1",type:"host"}]},routingTables:{R1:{protocol:"EIGRP",text:'<script>alert("x")</script>'}}};
+  assert.ok(!routingPopover(run,"R1").includes("<script>"));
+  assert.match(routingPopover(run,"R1"),/&lt;script&gt;/);
+  assert.equal(routingPopover(run,"PC1"),"");
+});

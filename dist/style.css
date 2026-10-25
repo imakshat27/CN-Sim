@@ -1880,3 +1880,19 @@ body:has(.simulation-progress:not([hidden])) { padding-bottom: 110px; }
   .device-sidebar .panel-body { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .device-sidebar .device-card:last-of-type { grid-column: 1 / -1; }
 }
+/* Historical router tables belong to the selected packet-journey run. */
+[data-trace-router] { cursor: help; }
+[data-trace-router]:hover .shape, [data-trace-router]:focus .shape { stroke: #22c55e; stroke-width: 3; }
+.router-popover { position: fixed; z-index: 80; width: min(740px, calc(100vw - 24px)); max-height: min(520px, calc(100dvh - 24px)); display: flex; flex-direction: column; border: 1px solid #bbf7d0; border-radius: 20px; background: white; box-shadow: 0 15px 55px #173d302b; overflow: hidden; }
+.router-popover header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px 10px; flex-shrink: 0; }
+.router-popover header strong { font-size: 14px; color: #166534; }
+.router-popover header p { font-size: 11px; color: #718079; margin: 4px 0 0; }
+.routing-context, .routing-legacy, .routing-foot { font-size: 11px; line-height: 1.6; padding: 0 20px; margin: 0 0 12px; flex-shrink: 0; color: #617569; }
+.routing-legacy { color: #a16207; }
+.routing-scroll { overflow: auto; min-height: 0; margin: 0 12px 12px; border-radius: 12px; border: 1px solid #e7efe9; }
+.routing-scroll pre { font: 11px/1.7 var(--mono); background: #f8faf9; color: #243342; padding: 14px; margin: 0; border: 0; border-radius: 0; white-space: pre; max-height: none; }
+.routing-scroll table { width: 100%; border-collapse: collapse; font: 11px/1.6 var(--mono); white-space: nowrap; }
+.routing-scroll th, .routing-scroll td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #edf2ef; }
+.routing-scroll th { background: #f0fdf4; color: #166534; }
+.routing-foot { margin-bottom: 16px; font-size: 10px; }
+@media print { .router-popover { display: none !important; } }
