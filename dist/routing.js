@@ -1,18 +1,38 @@
-import { esc } from "./ui.js?v=20261026-2";
+import { esc } from "./ui.js?v=20261026-3";
 
-// Historical inspection must never read the currently deployed lab's tables.
+const routerIds = (run) =>
+  new Map(run.topology.nodes.map((node, index) => [`10.255.0.${index + 1}`, node]));
+const peerFor = (run, address) => {
+  for (const [index, link] of run.topology.links.entries()) {
+    const prefix = `10.0.${index + 1}.`;
+    if (address === prefix + "1") return link.b;
+    if (address === prefix + "2") return link.a;
+  }
+  return address || "Directly connected";
+};
+const nativeRows = (run, id, text) => {
+  const routers = routerIds(run), rows = [];
+  for (const line of text.split("\n")) {
+    const match = line.match(/^\s*[ROE][^\s]*\s+(10\.255\.0\.\d+)\/32\s+\[\d+\/(\d+)\](?:\s+via\s+(\d+\.\d+\.\d+\.\d+))?/);
+    if (!match) continue;
+    const destination = routers.get(match[1]);
+    if (destination?.type === "router" && destination.id !== id)
+      rows.push({ router: destination.id, cost: match[2], nextHop: peerFor(run, match[3]) });
+  }
+  return rows;
+};
+const fallbackRows = (run, id, routes) => {
+  const routers = routerIds(run);
+  return routes.filter((route) => /^10\.255\.0\.\d+\/32$/.test(route.dst || "")).flatMap((route) => (route.nexthops?.length ? route.nexthops : [route]).map((hop) => ({ router: routers.get((route.dst || "").split("/")[0])?.id, cost: "—", nextHop: peerFor(run, hop.gateway || route.gateway) }))).filter((row) => row.router && row.router !== id);
+};
+
+// Historical inspection only reads state saved with the selected run.
 export function routingPopover(run, id) {
-  const node = run?.topology.nodes.find(node => node.id === id && node.type === "router");
+  const node = run?.topology.nodes.find((node) => node.id === id && node.type === "router");
   if (!node) return "";
   const saved = run.routingTables?.[id];
-  const header = `<header><div><strong>${esc(id)} · ${esc(run.protocol)} routing table</strong><p>Trial ${esc(run.trial)} · end of the selected run</p></div><button class="btn small ghost" data-action="close-routing-popover" aria-label="Close routing table">×</button></header>`;
-  const context = `<p class="routing-context">This is the recorded table after this simulation finished. It may differ from the table when an earlier packet was sent.</p>`;
-  if (saved?.protocol === run.protocol && saved.text) {
-    return header + context + `<div class="routing-scroll" tabindex="0" aria-label="Recorded ${esc(run.protocol)} routing table for ${esc(id)}"><pre>${esc(saved.text)}</pre></div><p class="routing-foot">FRRouting table · [administrative distance / protocol metric]. Connected routes appear alongside ${esc(run.protocol)} routes.</p>`;
-  }
-  const routes = run.routes?.[id];
-  if (!routes?.length) return header + `<p class="routing-context">No routing table was recorded for this router in this run.</p>`;
-  const rows = routes.flatMap(route => (route.nexthops?.length ? route.nexthops : [route]).map(hop =>
-    `<tr><td>${esc(route.dst || "default")}</td><td>${esc(hop.gateway || route.gateway || "Directly connected")}</td><td>${esc(hop.dev || route.dev || "—")}</td><td>${esc(route.protocol || "kernel")}</td></tr>`));
-  return header + context + `<p class="routing-legacy">Only the Linux forwarding table is available for this run. Protocol metrics were not recorded; the Linux route priority is not the ${esc(run.protocol)} metric. Run a new simulation to save the full FRRouting table.</p><div class="routing-scroll" tabindex="0" aria-label="Recorded forwarding table for ${esc(id)}"><table><thead><tr><th>Destination</th><th>Next hop</th><th>Interface</th><th>Learned by</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  const rows = saved?.protocol === run.protocol && saved.text ? nativeRows(run, id, saved.text) : fallbackRows(run, id, run.routes?.[id] || []);
+  const header = `<header><div><strong>${esc(id)} · ${esc(run.protocol)} routes</strong><p>Trial ${esc(run.trial)} · recorded at the end of this run</p></div><button class="btn small ghost" data-action="close-routing-popover" aria-label="Close routing table">×</button></header>`;
+  if (!rows.length) return header + `<p class="routing-context">No remote-router route was recorded for this router in the selected run.</p>`;
+  return header + `<div class="routing-simple"><table aria-label="${esc(run.protocol)} routes from ${esc(id)}"><thead><tr><th>Router</th><th>Cost</th><th>Next hop</th></tr></thead><tbody>${rows.map((row) => `<tr><td><span class="routing-router">${esc(row.router)}</span></td><td class="routing-cost">${esc(row.cost)}</td><td>${esc(row.nextHop)}</td></tr>`).join("")}</tbody></table></div><p class="routing-foot">Cost is the native ${esc(run.protocol)} metric for this route.</p>`;
 }

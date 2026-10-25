@@ -1895,6 +1895,13 @@ body:has(.simulation-progress:not([hidden])) { padding-bottom: 110px; }
 .routing-scroll th, .routing-scroll td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #edf2ef; }
 .routing-scroll th { background: #f0fdf4; color: #166534; }
 .routing-foot { margin-bottom: 16px; font-size: 10px; }
+.routing-simple { overflow: auto; margin: 6px 20px 14px; border: 1px solid #dcf3e3; border-radius: 14px; background: #fcfffd; }
+.routing-simple table { width: 100%; border-collapse: collapse; }
+.routing-simple th { padding: 10px 14px; background: #effcf3; color: #538068; font: 9px var(--mono); letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+.routing-simple td { padding: 12px 14px; border-top: 1px solid #e8f3eb; color: #304b3b; font-size: 12px; }
+.routing-simple tr:hover td { background: #f5fdf7; }
+.routing-router { display: inline-flex; min-width: 29px; justify-content: center; padding: 3px 7px; border-radius: 7px; background: #dcfce7; color: #16713d; font: 11px var(--mono); font-weight: 700; }
+.routing-cost { color: #176a41; font: 12px var(--mono); font-weight: 700; }
 .metric-label { display: inline-flex; align-items: center; gap: 4px; }
 .metric-help { width: 15px; height: 15px; padding: 0; display: inline-grid; place-items: center; vertical-align: middle; color: #5b7467; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 50%; cursor: help; }
 .metric-help:hover { color: #166534; border-color: #4ade80; background: #dcfce7; }

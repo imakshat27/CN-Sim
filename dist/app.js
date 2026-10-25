@@ -1,4 +1,4 @@
-import { icon, esc, btn, fmt, topologySVG } from "./ui.js?v=20261026-2";
+import { icon, esc, btn, fmt, topologySVG } from "./ui.js?v=20261026-3";
 import {
   workspace,
   traceView,
@@ -9,9 +9,9 @@ import {
   inspector,
   routeInspector,
   eventRows,
-} from "./views.js?v=20261026-2";
-import { routingPopover } from "./routing.js?v=20261026-2";
-import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261026-2";
+} from "./views.js?v=20261026-3";
+import { routingPopover } from "./routing.js?v=20261026-3";
+import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261026-3";
 const $ = (q, root = document) => root.querySelector(q),
   main = $("#main");
 const configDefaults = {

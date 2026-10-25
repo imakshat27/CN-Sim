@@ -12,7 +12,7 @@ import {
   ring,
   color,
   topologySVG,
-} from "./ui.js?v=20261026-2";
+} from "./ui.js?v=20261026-3";
 const metricLabel = (label, description) =>
   `<span class="metric-label">${label}${metricHelp(label, description)}</span>`;
 const journey = (step) => `<nav class="journey no-print" aria-label="Simulation steps">${[["workspace", "Build your network"], ["packets", "Follow a packet"], ["report", "See the results"]].map(([view, label], i) => `<a href="#${view}" class="${step === i + 1 ? "current" : step > i + 1 ? "done" : ""}" ${step === i + 1 ? 'aria-current="step"' : ''}><span>${step > i + 1 ? "✓" : i + 1}</span>${label}</a>`).join("")}</nav>`;
