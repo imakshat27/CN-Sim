@@ -1,4 +1,4 @@
-import { icon, esc, btn, fmt, topologySVG } from "./ui.js?v=20261025-2";
+import { icon, esc, btn, fmt, topologySVG } from "./ui.js?v=20261026-2";
 import {
   workspace,
   traceView,
@@ -9,9 +9,9 @@ import {
   inspector,
   routeInspector,
   eventRows,
-} from "./views.js?v=20261025-2";
-import { routingPopover } from "./routing.js?v=20261026-1";
-import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261025-2";
+} from "./views.js?v=20261026-2";
+import { routingPopover } from "./routing.js?v=20261026-2";
+import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261026-2";
 const $ = (q, root = document) => root.querySelector(q),
   main = $("#main");
 const configDefaults = {
@@ -56,6 +56,7 @@ const s = {
   packetFilter: "all",
   packetSearch: "",
   packetPage: 0,
+  chartFilters: { throughput: "all", delay: "all" },
   logFilter: "all",
   drag: null,
   wire: null,
@@ -649,6 +650,18 @@ async function action(name, el) {
   if (name === "log-filter") {
     s.logFilter = el.dataset.filter;
     render();
+    return;
+  }
+  if (name === "chart-filter") {
+    s.chartFilters[el.dataset.chart] = el.dataset.protocol;
+    render();
+    return;
+  }
+  if (name === "metric-help") {
+    modal(
+      el.dataset.helpTitle || "Metric definition",
+      `<p>${esc(el.dataset.help || "No definition is available for this metric.")}</p>`,
+    );
     return;
   }
   if (name === "select-packet") {

@@ -7,11 +7,14 @@ import {
   panel,
   field,
   chart,
+  metricHelp,
   scores,
   ring,
   color,
   topologySVG,
-} from "./ui.js?v=20261025-2";
+} from "./ui.js?v=20261026-2";
+const metricLabel = (label, description) =>
+  `<span class="metric-label">${label}${metricHelp(label, description)}</span>`;
 const journey = (step) => `<nav class="journey no-print" aria-label="Simulation steps">${[["workspace", "Build your network"], ["packets", "Follow a packet"], ["report", "See the results"]].map(([view, label], i) => `<a href="#${view}" class="${step === i + 1 ? "current" : step > i + 1 ? "done" : ""}" ${step === i + 1 ? 'aria-current="step"' : ''}><span>${step > i + 1 ? "✓" : i + 1}</span>${label}</a>`).join("")}</nav>`;
 const head = (number, title, subtitle, actions = "") =>
   `<div class="page-heading"><div><p class="eyebrow"><span class="slash">/</span> ${number} · ROUTING LABORATORY</p><h1>${title}</h1><p class="subtitle">${subtitle}</p></div><div class="heading-actions no-print">${actions}</div></div>`;
@@ -167,7 +170,7 @@ function traceContent(s, r) {
     page = Math.min(s.packetPage, pages - 1);
   const visible = filtered.slice(page * pageSize, (page + 1) * pageSize);
   const p = r.packets.find((p) => p.id === s.selectedPacket) || r.packets[0];
-  return `<div class="trace-layout"><div>${panel("The packet’s journey", `<div class="canvas-wrap" style="min-height:280px"><svg class="topology-svg" style="min-height:280px;height:330px" viewBox="0 0 1100 620" aria-label="Captured packet path">${topologySVG(r.topology, { trace: p, editable: false, inspectRoutes: true })}</svg><div class="canvas-badge">PACKET #${p?.id || "—"} · ${r.protocol}</div></div><div class="canvas-footer"><span>${r.config.source} → ${r.config.target}</span><span>Hover a router to see its recorded routing table</span></div>`)}<div class="section-space">${panel("Choose a packet to follow", `<div class="trace-table"><table class="data-table"><thead><tr><th>Packet</th><th>Sent at</th><th>Status</th><th>One-way</th><th>RTT</th><th>Observed hops</th></tr></thead><tbody>${visible.map((p) => `<tr class="clickable ${s.selectedPacket === p.id ? "selected" : ""}" data-action="select-packet" data-packet="${p.id}"><td class="mono">#${p.id}</td><td class="mono">${fmt(p.time, 3)}s</td><td><span class="packet-status ${p.status === "lost" ? "lost" : ""}">${p.status}</span></td><td class="mono">${fmt(p.delay, 2)} ms</td><td class="mono">${fmt(p.rtt, 2)} ms</td><td>${p.hops.length}</td></tr>`).join("")}</tbody></table></div><div class="canvas-footer"><span>${filtered.length} matching packets · page ${page + 1}/${pages}</span><span>${btn("Previous", "packet-prev", "", "small", page === 0 ? "disabled" : "")}${btn("Next", "packet-next", "", "small", page >= pages - 1 ? "disabled" : "")}</span></div>`, `<div style="display:flex;gap:7px"><input id="packet-search" aria-label="Search packet number" placeholder="# packet" value="${esc(s.packetSearch)}" style="width:72px;border:1px solid #e0e7eb;border-radius:4px;font:9px var(--mono);padding:5px"><select id="packet-filter" aria-label="Packet status" style="font-size:9px;border:1px solid #e0e7eb;border-radius:4px;padding:5px">${["all", "delivered", "lost"].map((x) => `<option ${x === s.packetFilter ? "selected" : ""}>${x}</option>`).join("")}</select></div>`)}</div></div><aside><section class="panel trace-details"><div class="panel-title"><h2>Packet #${p?.id || "—"}</h2><span class="packet-status ${p?.status === "lost" ? "lost" : ""}">${p?.status || "unknown"}</span></div><div class="trace-selection"><span class="mono">${r.config.source}</span> <span class="muted">→</span> <span class="mono">${r.config.target}</span><p>${r.config.size} byte UDP payload · sequence-correlated</p></div>${p ? `<div class="metric-list"><div><span>Sent at</span><b>${fmt(p.time, 4)} s</b></div><div><span>One-way delay</span><b>${fmt(p.delay, 3)} ms</b></div><div><span>Round-trip delay</span><b>${fmt(p.rtt, 3)} ms</b></div></div><div class="section-label" style="padding:12px 18px 0">CAPTURED EGRESS OBSERVATIONS</div>${p.hops.map((h, i) => `<div class="trace-step"><span class="step-dot">${i + 1}</span><div><b>${esc(h.node)} <span class="tag">${esc(h.interface || "egress")}</span></b><p>${fmt(h.time, 6)}s · ${h.ip_bytes} IPv4 bytes</p><a style="font-size:9px" href="/api/capture/${r.id}/${encodeURIComponent(h.node)}" download>Download device PCAP ↗</a></div></div>`).join("")}${p.status === "delivered" ? `<div class="trace-step"><span class="step-dot">✓</span><div><b>${esc(r.config.target)} · received</b><p>Delivery confirmed by UDP receiver</p></div></div>` : `<div class="trace-step"><span class="step-dot" style="color:var(--red)">×</span><div><b>Not received within drain window</b><p>${esc(p.error || "The capture alone does not establish a drop cause.")}</p></div></div>`}` : ""}<div class="panel-body"><p class="small-note">Egress timestamps come from tcpdump's realtime clock. One-way latency uses the shared monotonic clock and is not inferred from the animation.</p>${btn("View real traceroute", "result-trace", "trace", "small wide")}</div></section></aside></div>`;
+  return `<div class="trace-layout"><div>${panel("The packet’s journey", `<div class="canvas-wrap" style="min-height:280px"><svg class="topology-svg" style="min-height:280px;height:330px" viewBox="0 0 1100 620" aria-label="Captured packet path">${topologySVG(r.topology, { trace: p, editable: false, inspectRoutes: true })}</svg><div class="canvas-badge">PACKET #${p?.id || "—"} · ${r.protocol}</div></div><div class="canvas-footer"><span>${r.config.source} → ${r.config.target}</span><span>Hover a router to see its recorded routing table</span></div>`)}<div class="section-space">${panel("Choose a packet to follow", `<div class="trace-table"><table class="data-table"><thead><tr><th>Packet</th><th>Sent at</th><th>${metricLabel("Status", "Delivered means the receiver logged the probe ID. Lost means its unique probe ID was not received by the end of the drain window.")}</th><th>${metricLabel("One-way", "Time from the sender's monotonic timestamp to the receiver's monotonic arrival timestamp.")}</th><th>${metricLabel("RTT", "Round-trip time measured from the echoed UDP probe. It is separate from one-way delay.")}</th><th>${metricLabel("Observed hops", "Number of virtual-device egress captures correlated to this probe. It is not an inferred route.")}</th></tr></thead><tbody>${visible.map((p) => `<tr class="clickable ${s.selectedPacket === p.id ? "selected" : ""}" data-action="select-packet" data-packet="${p.id}"><td class="mono">#${p.id}</td><td class="mono">${fmt(p.time, 3)}s</td><td><span class="packet-status ${p.status === "lost" ? "lost" : ""}">${p.status}</span></td><td class="mono">${fmt(p.delay, 2)} ms</td><td class="mono">${fmt(p.rtt, 2)} ms</td><td>${p.hops.length}</td></tr>`).join("")}</tbody></table></div><div class="canvas-footer"><span>${filtered.length} matching packets · page ${page + 1}/${pages}</span><span>${btn("Previous", "packet-prev", "", "small", page === 0 ? "disabled" : "")}${btn("Next", "packet-next", "", "small", page >= pages - 1 ? "disabled" : "")}</span></div>`, `<div style="display:flex;gap:7px"><input id="packet-search" aria-label="Search packet number" placeholder="# packet" value="${esc(s.packetSearch)}" style="width:72px;border:1px solid #e0e7eb;border-radius:4px;font:9px var(--mono);padding:5px"><select id="packet-filter" aria-label="Packet status" style="font-size:9px;border:1px solid #e0e7eb;border-radius:4px;padding:5px">${["all", "delivered", "lost"].map((x) => `<option ${x === s.packetFilter ? "selected" : ""}>${x}</option>`).join("")}</select></div>`)}</div></div><aside><section class="panel trace-details"><div class="panel-title"><h2>Packet #${p?.id || "—"}</h2><span class="packet-status ${p?.status === "lost" ? "lost" : ""}">${p?.status || "unknown"}</span></div><div class="trace-selection"><span class="mono">${r.config.source}</span> <span class="muted">→</span> <span class="mono">${r.config.target}</span><p>${r.config.size} byte UDP payload · sequence-correlated</p></div>${p ? `<div class="metric-list"><div><span>Sent at</span><b>${fmt(p.time, 4)} s</b></div><div><span>${metricLabel("One-way delay", "Time from send to receive using the shared Linux monotonic clock.")}</span><b>${fmt(p.delay, 3)} ms</b></div><div><span>${metricLabel("Round-trip delay", "Time for a probe and its UDP echo to return to the sender.")}</span><b>${fmt(p.rtt, 3)} ms</b></div></div><div class="section-label" style="padding:12px 18px 0">CAPTURED EGRESS OBSERVATIONS ${metricHelp("IPv4 bytes", "The observed IPv4 packet length at egress: IPv4 header, UDP header and probe data together. It is not the same as payload goodput.")}</div>${p.hops.map((h, i) => `<div class="trace-step"><span class="step-dot">${i + 1}</span><div><b>${esc(h.node)}</b><p>${fmt(h.time, 6)}s · ${h.ip_bytes} IPv4 bytes</p></div></div>`).join("")}${p.status === "delivered" ? `<div class="trace-step"><span class="step-dot">✓</span><div><b>${esc(r.config.target)} · received</b><p>Delivery confirmed by UDP receiver</p></div></div>` : `<div class="trace-step"><span class="step-dot" style="color:var(--red)">×</span><div><b>Not received within drain window</b><p>${esc(p.error || "Loss is based on the missing unique receiver record; an egress capture alone does not establish the exact drop point.")}</p></div></div>`}` : ""}<div class="panel-body"><p class="small-note">Egress timestamps come from tcpdump's realtime clock. One-way latency uses the shared monotonic clock and is not inferred from the animation.</p>${btn("View real traceroute", "result-trace", "trace", "small wide")}</div></section></aside></div>`;
 }
 function empty(s, ic, title, desc) {
   return `<section class="panel empty-state">${icon(ic)}<h2>${title}</h2><p>${desc}</p><a class="btn primary" href="#workspace">${icon("network")} Open workspace</a></section>`;
@@ -230,37 +233,37 @@ function reportContent(s, rs) {
     .slice()
     .sort((a, b) => b.score.total - a.score.total)[0];
   const rows = [
-    ["Delivery ratio", "delivery", "%", 1],
-    ["Packet loss", "loss", "%", 1],
-    ["Mean one-way delay", "meanDelay", "ms", 2],
-    ["95th percentile delay", "p95Delay", "ms", 2],
-    ["Mean round-trip delay", "meanRTT", "ms", 2],
-    ["Delay variation¹", "jitter", "ms", 2],
-    ["Payload goodput", "throughput", "Mbps", 4],
-    ["Offered payload load", "offeredLoad", "Mbps", 4],
-    ["Startup convergence²", "initialConvergence", "s", 3],
-    ["Failure route convergence²", "routeConvergence", "s", 3],
-    ["Data-plane recovery³", "recovery", "s", 3],
-    ["Routing packet transmissions", "controlMessages", "", 0],
-    ["Routing IPv4 bytes", "controlBytes", "bytes", 0],
-    ["Startup routing bytes", "startupControlBytes", "bytes", 0],
-    ["Observed route-table changes", "routeChanges", "", 0],
-    ["Local send errors", "sourceErrors", "", 0],
-    ["Probes generated", "sent", "", 0],
-    ["Probes delivered", "delivered", "", 0],
+    ["Delivery ratio", "delivery", "%", 1, "Unique probe IDs received divided by unique probe IDs generated."],
+    ["Packet loss", "loss", "%", 1, "Generated probe IDs with no receiver record by the end of the post-run drain window."],
+    ["Mean one-way delay", "meanDelay", "ms", 2, "Average sender-to-receiver delay from shared monotonic-clock timestamps."],
+    ["95th percentile delay", "p95Delay", "ms", 2, "A delay value below which 95% of delivered probes fell."],
+    ["Mean round-trip delay", "meanRTT", "ms", 2, "Average time for a UDP probe and its echo to return to the sender."],
+    ["Delay variation¹", "jitter", "ms", 2, "Mean absolute difference between consecutive delivered one-way delays."],
+    ["Payload goodput", "throughput", "Mbps", 4, "Useful UDP payload delivered to the receiver per second. IPv4 and UDP headers are excluded."],
+    ["Offered payload load", "offeredLoad", "Mbps", 4, "UDP application payload generated by the sender per second, before losses."],
+    ["Startup convergence²", "initialConvergence", "s", 3, "Time until reachability and routing-table stability requirements are met before traffic begins."],
+    ["Failure route convergence²", "routeConvergence", "s", 3, "Time after the interface failure until routes are complete and stable for the required window."],
+    ["Data-plane recovery³", "recovery", "s", 3, "First complete one-second send window after failure in which every expected probe arrived."],
+    ["Routing packet transmissions", "controlMessages", "", 0, "Observed RIP, OSPF or EIGRP IPv4 packets at virtual-device egress."],
+    ["Routing IPv4 bytes", "controlBytes", "bytes", 0, "Total full IPv4 packet bytes for routing control traffic, counted at egress."],
+    ["Startup routing bytes", "startupControlBytes", "bytes", 0, "Routing-control IPv4 bytes observed before the timed traffic interval."],
+    ["Observed route-table changes", "routeChanges", "", 0, "Changes in sampled routing/forwarding state during the observed run."],
+    ["Local send errors", "sourceErrors", "", 0, "Errors reported by the source application while attempting to send probes."],
+    ["Probes generated", "sent", "", 0, "Unique numbered UDP probes the sender generated."],
+    ["Probes delivered", "delivered", "", 0, "Unique numbered UDP probes confirmed by the receiver."],
   ];
   return `${rs.flatMap((r) => (r.warnings?.length ? r.warnings : r.protocol === "EIGRP" && r.failureAt !== null && (r.metrics.recovery === null || r.metrics.routeConvergence === null) ? ["Full EIGRP recovery was not confirmed in this FRRouting experiment. Interpret this as an implementation-specific result; see the methodology and KNOWN_LIMITATIONS.md."] : []).map((w) => `<div class="report-note warning"><b>${r.protocol} · trial ${r.trial}:</b> ${esc(w)}</div>`)).join("")}<div class="report-hero"><div><p class="eyebrow">EXPERIMENT ${esc(s.selectedBatch.toUpperCase())}</p><h2>Different protocols. Same conditions.</h2><p>${rs[0].topology.nodes.length} devices · ${rs[0].topology.links.length} links · ${c.source} → ${c.target} · ${c.duration}s of traffic · ${c.rate} packets/s · ${c.size} byte payload<br>${c.failure_link ? `Link ${c.failure_link} fails at ${c.failure_at}s` : "Steady-state test · no scheduled failure"} · ${c.timer_profile === "lab" ? "Lab timer profile" : "Standard FRR timer profile"} · ${rs.length} completed run${rs.length > 1 ? "s" : ""}</p></div><div class="report-marker">${protocols.length === 3 ? "THREE-PROTOCOL COMPARISON" : "SINGLE-PROTOCOL EXPERIMENT"}</div></div><div class="score-grid" style="grid-template-columns:repeat(${groups.length}, minmax(0,1fr))">${groups
     .map(
       (g) =>
         `<section class="score-card"><div class="score-heading"><span class="protocol-badge">${g.protocol}<small>${g.protocol === "RIP" ? "Distance vector · hop count" : g.protocol === "OSPF" ? "Link state · shortest path" : "Advanced distance vector · DUAL"}</small></span><span class="tag ${g === winner ? "teal" : ""}">${g.runs.length} trial${g.runs.length > 1 ? "s" : ""}</span></div><div class="ring-wrap">${ring(g.score.total)}<div class="score-description"><strong class="${color(g.score.total)}">${g.score.total >= 80 ? "Strong result" : g.score.total >= 60 ? "Mixed result" : "Needs attention"}</strong><span>A weighted score for this experiment, using the formula below.</span></div></div>${[
-          ["Delivery", g.score.delivery],
-          ["Latency", g.score.latency],
-          ["Convergence", g.score.convergence],
-          ["Control efficiency", g.score.overhead],
+          ["Delivery", g.score.delivery, "Score component based on the percentage of uniquely generated probes confirmed by the receiver."],
+          ["Latency", g.score.latency, "Score component based on mean one-way delay, with a 50 ms reference target."],
+          ["Convergence", g.score.convergence, "Score component based on startup convergence, or route convergence when a failure is configured."],
+          ["Control efficiency", g.score.overhead, "Score component: data-plane IPv4 bytes divided by data-plane plus routing-control IPv4 bytes."],
         ]
           .map(
-            ([name, v]) =>
-              `<div class="score-row"><span>${name}</span><span class="mini-track"><span style="width:${v}%"></span></span><b class="mono ${color(v)}">${fmt(v, 0)}%</b></div>`,
+            ([name, v, description]) =>
+              `<div class="score-row"><span>${metricLabel(name, description)}</span><span class="mini-track"><span style="width:${v}%"></span></span><b class="mono ${color(v)}">${fmt(v, 0)}%</b></div>`,
           )
           .join(
             "",
@@ -268,12 +271,12 @@ function reportContent(s, rs) {
     )
     .join(
       "",
-    )}</div><div class="report-note"><b>How to read the circles.</b> These are project-defined scores, not standard protocol efficiency percentages. Overall = 40% delivery + 20% latency + 25% convergence + 15% control efficiency. Green ≥ 80, yellow ≥ 60, red &lt; 60. Missing convergence or delay observations receive 0 for that component. <a href="#methodology">See formulas and measurement definitions ↗</a></div><div class="chart-grid">${chart(latest, "throughput", "Payload goodput over time", "Mbps")}${chart(latest, "delay", "One-way delay over time", "ms")}</div>${panel(
+    )}</div>${c.failure_link ? `<div class="report-note"><b>Real failure evidence.</b> PacketSim brought both ends of ${esc(c.failure_link)} down inside the virtual Linux network during the traffic interval. Packet loss is calculated from unique UDP probe IDs missing from the receiver log after the drain window; it is never drawn in for the animation.</div>` : ""}<div class="report-note"><b>How to read the circles.</b> These are project-defined scores, not standard protocol efficiency percentages. Overall = 40% delivery + 20% latency + 25% convergence + 15% control efficiency. Green ≥ 80, yellow ≥ 60, red &lt; 60. Missing convergence or delay observations receive 0 for that component. <a href="#methodology">See formulas and measurement definitions ↗</a></div><div class="chart-grid">${chart(latest, "throughput", "Payload goodput over time", "Mbps", s.chartFilters.throughput, "Useful UDP payload bytes confirmed at the receiver each second. IP/UDP headers are excluded, so this is different from IPv4 bytes in the ledgers.")}${chart(latest, "delay", "One-way delay over time", "ms", s.chartFilters.delay, "Average sender-to-receiver delay for packets sent in each one-second cohort. The red dashed marker is the actual scheduled interface-down event.")}</div>${panel(
     "Measured performance",
     `<div class="data-table-wrap"><table class="data-table"><thead><tr><th>MEASUREMENT · ${groups.some((g) => g.runs.length > 1) ? "MEAN ± SAMPLE SD" : "OBSERVED VALUE"}</th>${groups.map((g) => `<th>${g.protocol} · n=${g.runs.length}</th>`).join("")}</tr></thead><tbody>${rows
       .map(
-        ([name, key, unit, d]) =>
-          `<tr><td>${name}</td>${groups
+        ([name, key, unit, d, description]) =>
+          `<tr><td>${metricLabel(name, description)}</td>${groups
             .map((g) => {
               const vals = g.runs
                   .map((r) => r.metrics[key])
@@ -315,7 +318,7 @@ function controlPanel(r) {
     '<div class="section-space">' +
     panel(
       "Routing message ledger",
-      `<div class="trace-table"><table class="data-table"><thead><tr><th>Time</th><th>Device</th><th>Interface</th><th>Protocol</th><th>Source → destination</th><th>IPv4 bytes</th></tr></thead><tbody>${events.map((e) => `<tr><td class="mono">${fmt(e.time, 6)}s</td><td>${esc(e.node)}</td><td class="mono">${esc(e.interface)}</td><td><span class="tag teal">${esc(e.protocol)}</span></td><td class="mono">${esc(e.source)} → ${esc(e.target)}</td><td class="mono">${e.bytes}</td></tr>`).join("")}</tbody></table></div><div class="panel-body"><p class="small-note">First ${events.length} indexed routing transmissions from the traffic window · ${r.metrics.controlMessages} total observed. Download device PCAPs for protocol headers, hello messages, advertisements and query/reply inspection in Wireshark.</p></div>`,
+      `<div class="trace-table"><table class="data-table"><thead><tr><th>Time</th><th>Device</th><th>${metricLabel("Protocol", "The routing protocol packet observed at this device's virtual-network egress.")}</th><th>Source → destination</th><th>${metricLabel("IPv4 bytes", "Full IPv4 packet length observed at egress, including the IP header and routing-protocol payload.")}</th></tr></thead><tbody>${events.map((e) => `<tr><td class="mono">${fmt(e.time, 6)}s</td><td>${esc(e.node)}</td><td><span class="tag teal">${esc(e.protocol)}</span></td><td class="mono">${esc(e.source)} → ${esc(e.target)}</td><td class="mono">${e.bytes}</td></tr>`).join("")}</tbody></table></div><div class="panel-body"><p class="small-note">First ${events.length} indexed routing transmissions from the traffic window · ${r.metrics.controlMessages} total observed. These are real egress captures counted once per observed protocol packet.</p></div>`,
       '<span class="tag">CAPTURED ON EGRESS</span>',
     ) +
     "</div>"

@@ -1,4 +1,4 @@
-import { esc } from "./ui.js?v=20261025-2";
+import { esc } from "./ui.js?v=20261026-2";
 
 // Historical inspection must never read the currently deployed lab's tables.
 export function routingPopover(run, id) {

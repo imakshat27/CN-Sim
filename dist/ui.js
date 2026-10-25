@@ -60,6 +60,8 @@ export const btn = (label, action, ic = "", classes = "", attrs = "") =>
   `<button class="btn ${classes}" data-action="${action}" ${attrs}>${ic ? icon(ic) : ""}${label}</button>`;
 export const panel = (title, body, right = "", classes = "") =>
   `<section class="panel ${classes}"><div class="panel-title"><h2>${title}</h2>${right}</div>${body}</section>`;
+export const metricHelp = (title, description) =>
+  `<button type="button" class="metric-help" data-action="metric-help" data-help-title="${esc(title)}" data-help="${esc(description)}" title="${esc(description)}" aria-label="Explain ${esc(title)}">${icon("info")}</button>`;
 export function field(label, name, value, options = {}) {
   const {
     type = "number",
@@ -73,12 +75,13 @@ export function field(label, name, value, options = {}) {
   const attrs = `id="cfg-${name}" data-config="${name}" ${disabled ? "disabled" : ""}`;
   return `<div class="field"><label for="cfg-${name}">${label}</label>${choices ? `<select ${attrs}>${choices.map(([val, text]) => `<option value="${esc(val)}" ${String(val) === String(value) ? "selected" : ""}>${esc(text)}</option>`).join("")}</select>` : `<input ${attrs} type="${type}" value="${esc(value)}" ${min !== undefined ? `min="${min}"` : ""} ${max !== undefined ? `max="${max}"` : ""} ${step ? `step="${step}"` : ""}>`}${help ? `<div class="field-help">${help}</div>` : ""}</div>`;
 }
-export function chart(runs, metric, title, unit) {
+export function chart(runs, metric, title, unit, filter = "all", description = "") {
   const colors = { RIP: "#eab308", OSPF: "#3b82f6", EIGRP: "#22c55e" };
   const width = 500,
     height = 185,
     pad = { l: 43, r: 12, t: 10, b: 28 };
-  const valid = runs.filter((r) => r.bins?.length);
+  const allValid = runs.filter((r) => r.bins?.length);
+  const valid = filter === "all" ? allValid : allValid.filter((r) => r.protocol === filter);
   const maxX = Math.max(1, ...valid.map((r) => r.config.duration));
   const values = valid.flatMap((r) =>
     r.bins.map((b) => b[metric]).filter((v) => v !== null),
@@ -107,13 +110,14 @@ export function chart(runs, metric, title, unit) {
         path += `${open ? "L" : "M"}${x(b.time).toFixed(1)},${y(b[metric]).toFixed(1)} `;
         open = true;
       }
-      return `<path d="${path}" fill="none" stroke="${colors[r.protocol]}" stroke-width="2" stroke-linejoin="round"/>${r.failureAt !== null ? `<line x1="${x(r.failureAt)}" x2="${x(r.failureAt)}" y1="${pad.t}" y2="${height - pad.b}" stroke="#da9a9c" stroke-dasharray="3 4"/>` : ""}`;
+      const dash = { RIP: "", OSPF: "7 3", EIGRP: "2 3" }[r.protocol];
+      return `<path d="${path}" fill="none" stroke="${colors[r.protocol]}" stroke-width="2" stroke-linejoin="round" ${dash ? `stroke-dasharray="${dash}"` : ""}/>${r.failureAt !== null ? `<line x1="${x(r.failureAt)}" x2="${x(r.failureAt)}" y1="${pad.t}" y2="${height - pad.b}" stroke="#da9a9c" stroke-dasharray="3 4"/>` : ""}`;
     })
     .join("");
   return panel(
     title,
-    `<div class="chart-body"><svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${title} in ${unit} by send-time cohort. Dashed red line marks link failure.">${grid}${paths}</svg><div class="chart-legend">${[...new Set(valid.map((r) => r.protocol))].map((p) => `<span><i style="background:${colors[p]}"></i>${p}</span>`).join("")}</div></div>`,
-    `<span class="tag">${unit}</span>`,
+    `<div class="chart-body"><div class="chart-controls" aria-label="Choose protocol series"><span>Show</span>${["all", ...new Set(allValid.map((r) => r.protocol))].map((p) => `<button data-action="chart-filter" data-chart="${metric}" data-protocol="${p}" class="${filter === p ? "active" : ""}">${p === "all" ? "All" : p}</button>`).join("")}</div><svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${title} in ${unit} by send-time cohort. Dashed red line marks link failure.">${grid}${paths}</svg><div class="chart-legend">${[...new Set(valid.map((r) => r.protocol))].map((p) => `<span><i style="background:${colors[p]}"></i>${p}</span>`).join("")}</div>${valid.length > 1 && valid.every((r) => JSON.stringify(r.bins.map((b) => b[metric])) === JSON.stringify(valid[0].bins.map((b) => b[metric])) ? '<p class="chart-overlap-note">The visible protocols reported the same values here, so their lines overlap. Choose one to inspect it.</p>' : ""}</div>`,
+    `${metricHelp(title, description || `${title} is calculated from the selected run data.`)}<span class="tag">${unit}</span>`,
   );
 }
 export function scores(m, failure) {
