@@ -8,6 +8,8 @@ import uuid
 from pathlib import Path
 
 DAEMONS = {"RIP": "ripd", "OSPF": "ospfd", "EIGRP": "eigrpd"}
+# Match the editor's maximum link speed so 100 Mbps and gigabit links differ.
+OSPF_REFERENCE_BANDWIDTH_MBPS = 1000
 
 
 def command(*args, check=True, timeout=10):
@@ -182,7 +184,7 @@ class Lab:
                 l = self.links[it["link"]]
                 config += f"interface {it['name']}\n"
                 if self.protocol == "OSPF":
-                    config += f" ip ospf network point-to-point\n ip ospf cost {max(1, int(100 / l['bandwidth']))}\n"
+                    config += f" ip ospf network point-to-point\n ip ospf cost {max(1, int(OSPF_REFERENCE_BANDWIDTH_MBPS / l['bandwidth']))}\n"
                     if self.profile == "lab":
                         config += (
                             " ip ospf hello-interval 1\n ip ospf dead-interval 4\n"

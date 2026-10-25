@@ -105,7 +105,7 @@ Charts group packets by their **send-time second** and show the last trial per p
 
 A common profile is a common experimental policy, not an assertion that protocol mechanisms are identical. Administrative carrier loss is distinct from neighbor timeout. Exact generated configurations are included in each full JSON export.
 
-OSPF cost is `max(1, floor(100 / bandwidth_Mbps))`. EIGRP interface bandwidth is set in kbps and its configured delay metric is `max(1, round(delay_ms × 100))` ten-microsecond units. Actual link shaping is separate from routing metrics.
+OSPF cost is `max(1, floor(1000 / bandwidth_Mbps))`, using a 1,000 Mbps reference to match the maximum link speed supported by the editor. For example, 10/100/1000 Mbps links cost 100/10/1 respectively. OSPF minimizes the sum of link costs along a path. Changing bandwidth requires redeploying the network or starting a new simulation; saved results retain their original configuration. EIGRP interface bandwidth is set in kbps and its configured delay metric is `max(1, round(delay_ms × 100))` ten-microsecond units. Actual link shaping is separate from routing metrics.
 
 ### Circular scores
 
