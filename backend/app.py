@@ -40,6 +40,9 @@ async def local_requests(request: Request, call_next):
                 {"detail": "Cross-origin mutation rejected"}, status_code=403
             )
     response = await call_next(request)
+    # Revalidate the entry page and modules so a deployment cannot mix UI releases.
+    if request.url.path == "/" or request.url.path.endswith((".html", ".js", ".css")):
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Content-Security-Policy"] = (

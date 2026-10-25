@@ -1,4 +1,4 @@
-import { icon, esc, btn, fmt, topologySVG } from "./ui.js";
+import { icon, esc, btn, fmt, topologySVG } from "./ui.js?v=20261025-2";
 import {
   workspace,
   traceView,
@@ -9,8 +9,8 @@ import {
   inspector,
   routeInspector,
   eventRows,
-} from "./views.js";
-import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js";
+} from "./views.js?v=20261025-2";
+import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261025-2";
 const $ = (q, root = document) => root.querySelector(q),
   main = $("#main");
 const configDefaults = {
