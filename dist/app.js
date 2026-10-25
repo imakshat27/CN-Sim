@@ -10,7 +10,7 @@ import {
   routeInspector,
   eventRows,
 } from "./views.js?v=20261026-3";
-import { routingPopover } from "./routing.js?v=20261026-3";
+import { routingPopover } from "./routing.js?v=20261026-4";
 import { simulationFinished, progressCopy, canvasPosition, devicePosition } from "./workflow.js?v=20261026-3";
 const $ = (q, root = document) => root.querySelector(q),
   main = $("#main");
